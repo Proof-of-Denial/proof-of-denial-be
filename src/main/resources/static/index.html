@@ -3,176 +3,507 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Proof of Denial — 시연</title>
+<title>Proof of Denial</title>
 <style>
-  :root { --bg:#F6F7F4; --panel:#fff; --ink:#1B1D22; --muted:#5F646E; --line:#D8DBD5; --blue:#2B4C7E; --blue-soft:#E6EDF7; --red:#B3261E; --red-soft:#FBEAE8; --green:#2E7D4F; --green-soft:#E4F3EA; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif; }
-  .wrap { max-width:960px; margin:0 auto; padding:28px 20px 80px; }
-  h1 { font-size:1.6rem; margin:0 0 4px; }
-  .sub { color:var(--muted); margin:0 0 24px; }
-  h2 { font-size:1.1rem; margin:32px 0 10px; }
-  .row { display:flex; gap:8px; }
-  input[type=text] { flex:1; font:inherit; padding:10px 12px; border:1px solid var(--line); border-radius:8px; }
-  button { font:inherit; padding:10px 16px; border:0; border-radius:8px; background:var(--blue); color:#fff; cursor:pointer; }
-  button:disabled { opacity:.5; cursor:default; }
-  button.ghost { background:var(--panel); color:var(--blue); border:1px solid var(--line); }
-  .steps { display:grid; gap:8px; margin-top:12px; }
-  .step { padding:10px 14px; border-radius:10px; border:1px solid var(--line); background:var(--panel); white-space:pre-wrap; word-break:break-all; }
-  .step .k { font-size:.72rem; letter-spacing:.08em; color:var(--muted); display:block; margin-bottom:2px; }
-  .step.ASSISTANT { border-left:4px solid var(--blue); }
-  .step.TOOL_CALL { border-left:4px solid #8A6100; background:#FBF1D6; }
-  .step.TOOL_RESULT { border-left:4px solid var(--red); background:var(--red-soft); }
-  .step.TOOL_RESULT.ok { border-left-color:var(--green); background:var(--green-soft); }
-  table { width:100%; border-collapse:collapse; background:var(--panel); font-size:.92rem; }
-  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
-  th { color:var(--muted); font-size:.78rem; letter-spacing:.04em; }
-  td.mono, span.mono { font-family:ui-monospace,Menlo,monospace; font-size:.85rem; }
-  .pill { display:inline-block; padding:1px 8px; border-radius:999px; font-size:.78rem; font-weight:600; }
-  .pill.BLOCKED { background:var(--red-soft); color:var(--red); }
-  .pill.ALLOWED { background:var(--green-soft); color:var(--green); }
-  .head { padding:12px 14px; background:var(--blue-soft); border-radius:10px; }
-  .err { color:var(--red); }
-  .muted { color:var(--muted); }
+  :root {
+    --bg: #0B0E14;
+    --panel: #12161F;
+    --panel-2: #171C27;
+    --line: #232A38;
+    --ink: #E6E9EF;
+    --muted: #8A93A6;
+    --dim: #5B6577;
+    --accent: #4F7CFF;
+    --accent-soft: rgba(79, 124, 255, .16);
+    --red: #FF4D4F;
+    --red-soft: rgba(255, 77, 79, .14);
+    --green: #2ED47A;
+    --green-soft: rgba(46, 212, 122, .14);
+    --amber: #F5A623;
+    --amber-soft: rgba(245, 166, 35, .14);
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --sans: -apple-system, "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+
+  /* ── 상단 바 ─────────────────────────────────────────── */
+  .top {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 22px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.01em; }
+  .logo .mark { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), #8F5CFF); display: grid; place-items: center; }
+  .logo .mark svg { width: 16px; height: 16px; }
+  .tag { color: var(--muted); font-size: .9rem; }
+  .top .right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: .78rem; font-weight: 600; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); }
+  .chip.on .dot { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+
+  /* ── 2열 레이아웃 ─────────────────────────────────────── */
+  .grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, .9fr); gap: 0; height: calc(100% - 57px); }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; height: auto; } .side { border-left: 0; border-top: 1px solid var(--line); } }
+
+  /* ── 채팅 ─────────────────────────────────────────────── */
+  .chat { display: flex; flex-direction: column; min-height: 520px; }
+  .chat-head { padding: 14px 22px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #2b3550, #1a2030); border: 1px solid var(--line); display: grid; place-items: center; }
+  .avatar svg { width: 18px; height: 18px; }
+  .chat-head .name { font-weight: 700; }
+  .chat-head .sub { color: var(--muted); font-size: .82rem; }
+  .msgs { flex: 1; overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth; }
+  .row { display: flex; gap: 10px; max-width: 86%; animation: rise .32s ease both; }
+  .row.me { align-self: flex-end; flex-direction: row-reverse; }
+  .row .avatar { width: 28px; height: 28px; flex: none; margin-top: 2px; }
+  .row.me .avatar { background: var(--accent); border-color: transparent; }
+  .row.me .avatar svg { width: 14px; height: 14px; }
+  .bubble { padding: 10px 14px; border-radius: 16px; background: var(--panel-2); border: 1px solid var(--line); white-space: pre-wrap; word-break: break-word; }
+  .row.me .bubble { background: var(--accent); border-color: transparent; color: #fff; border-bottom-right-radius: 4px; }
+  .row.ai .bubble { border-bottom-left-radius: 4px; }
+  .row.sys { align-self: center; max-width: 100%; }
+  .row.sys .bubble { background: transparent; border-style: dashed; color: var(--muted); font-size: .86rem; }
+  .row.sys.err .bubble { border-color: var(--red); color: var(--red); }
+
+  /* 도구 카드 */
+  .tool { display: grid; grid-template-columns: 30px 1fr; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); min-width: 260px; }
+  .tool .ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--accent-soft); }
+  .tool .ic svg { width: 15px; height: 15px; }
+  .tool .t { font-size: .78rem; letter-spacing: .06em; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+  .tool .v { font: .84rem/1.5 var(--mono); color: var(--ink); word-break: break-all; }
+  .tool.result .ic { background: var(--panel); }
+  .tool.blocked { border-color: var(--red); background: var(--red-soft); animation: rise .32s ease both, pulse-red 1.2s ease 1; }
+  .tool.blocked .ic { background: var(--red); }
+  .tool.blocked .ic svg { stroke: #fff; }
+  .tool.blocked .t { color: var(--red); }
+  .tool.blocked .v { font-family: var(--sans); font-size: .95rem; font-weight: 600; }
+  .tool.blocked .v small { display: block; font-weight: 400; font-size: .82rem; color: var(--muted); margin-top: 2px; }
+  .tool.allowed { border-color: var(--green); background: var(--green-soft); }
+  .tool.allowed .ic { background: var(--green); }
+  .tool.allowed .t { color: var(--green); }
+
+  /* 타이핑 점 */
+  .typing { display: inline-flex; gap: 4px; padding: 12px 14px; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite ease-in-out; }
+  .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+
+  /* 입력 */
+  .composer { border-top: 1px solid var(--line); padding: 12px 22px 18px; background: var(--panel); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .chips button { font: inherit; font-size: .84rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); cursor: pointer; }
+  .chips button:hover { border-color: var(--accent); }
+  .inrow { display: flex; gap: 8px; align-items: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 6px 6px 6px 14px; }
+  .inrow:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .inrow input { flex: 1; background: transparent; border: 0; outline: 0; color: var(--ink); font: inherit; font-size: 1rem; }
+  .inrow button { width: 38px; height: 38px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; cursor: pointer; display: grid; place-items: center; }
+  .inrow button:disabled { opacity: .45; cursor: default; }
+  .inrow button svg { width: 16px; height: 16px; }
+
+  /* ── 오른쪽: 증거 ──────────────────────────────────────── */
+  .side { border-left: 1px solid var(--line); background: var(--panel); overflow-y: auto; display: flex; flex-direction: column; }
+  .sec { padding: 16px 20px; border-bottom: 1px solid var(--line); }
+  .sec h2 { margin: 0 0 4px; font-size: .95rem; display: flex; align-items: center; gap: 8px; }
+  .sec h2 .n { margin-left: auto; font-weight: 600; font-size: .8rem; color: var(--muted); }
+  .sec .hint { color: var(--muted); font-size: .82rem; margin: 0 0 12px; }
+  .ledger { display: grid; gap: 8px; }
+  .rec { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
+  .rec.new { animation: rise .4s ease both, flash 1.6s ease 1; }
+  .rec .seq { font: 700 .95rem var(--mono); color: var(--muted); }
+  .rec .who { font-size: .78rem; color: var(--muted); }
+  .rec .who b { color: var(--ink); font-weight: 600; }
+  .rec .what { font-size: .9rem; }
+  .rec .hash { font: .72rem var(--mono); color: var(--dim); }
+  .badge { padding: 3px 9px; border-radius: 6px; font-size: .74rem; font-weight: 700; letter-spacing: .04em; }
+  .badge.BLOCKED { background: var(--red-soft); color: var(--red); }
+  .badge.ALLOWED { background: var(--green-soft); color: var(--green); }
+  .headbox { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font-size: .8rem; color: var(--muted); }
+  .headbox .h { font: .78rem var(--mono); color: var(--ink); word-break: break-all; margin-top: 2px; }
+
+  /* 도장 */
+  .stamp { padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); display: grid; gap: 8px; }
+  .stamp.ok { border-color: var(--green); }
+  .stamp.stale { border-color: var(--amber); background: var(--amber-soft); }
+  .stamp .st { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+  .stamp .st .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dim); }
+  .stamp.ok .st .dot { background: var(--green); box-shadow: 0 0 0 4px var(--green-soft); }
+  .stamp.stale .st .dot { background: var(--amber); box-shadow: 0 0 0 4px var(--amber-soft); }
+  .stamp .kv { font-size: .82rem; color: var(--muted); }
+  .stamp .kv a { color: var(--accent); text-decoration: none; font-family: var(--mono); font-size: .78rem; word-break: break-all; }
+  .stamp .kv a:hover { text-decoration: underline; }
+  .stamp button { font: inherit; font-size: .86rem; font-weight: 600; padding: 9px 12px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+  .stamp.stale button { background: var(--amber); color: #1a1200; animation: nudge 1.4s ease infinite; }
+  .stamp button:disabled { opacity: .5; cursor: default; animation: none; }
+  .cmd { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font: .74rem/1.5 var(--mono); color: var(--muted); word-break: break-all; cursor: pointer; }
+  .cmd:hover { border-color: var(--accent); color: var(--ink); }
+  .cmd .lbl { font-family: var(--sans); font-size: .76rem; color: var(--dim); display: block; margin-bottom: 4px; }
+
+  .empty { color: var(--dim); font-size: .86rem; text-align: center; padding: 18px 0; }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-2px); } }
+  @keyframes flash { 0% { background: var(--red-soft); } 100% { background: var(--panel-2); } }
+  @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(255,77,79,.45); } 100% { box-shadow: 0 0 0 14px rgba(255,77,79,0); } }
+  @keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } .msgs { scroll-behavior: auto; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Proof of Denial</h1>
-  <p class="sub">AI가 몰래 결제하려 한 걸 막고, 그 기록을 아무도 못 고치게 남긴다</p>
 
-  <h2>1. AI에게 시켜보기</h2>
-  <div class="row">
-    <input type="text" id="msg" value="계란 찾아줘">
-    <button id="send">보내기</button>
+<header class="top">
+  <div class="logo">
+    <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4z"/><path d="M9 12l2 2 4-4"/></svg></span>
+    Proof of Denial
   </div>
-  <div class="steps" id="steps"></div>
-
-  <h2>2. 장부 <button class="ghost" id="reload">새로고침</button></h2>
-  <div class="head" id="head">마지막 지문: <span class="mono muted">-</span></div>
-  <div style="overflow-x:auto;margin-top:10px">
-    <table>
-      <thead><tr><th>#</th><th>시각</th><th>누가</th><th>뭘</th><th>판정</th><th>사유</th><th>지문</th></tr></thead>
-      <tbody id="rows"></tbody>
-    </table>
+  <span class="tag">AI가 몰래 결제하려 한 걸 막고, 증거를 남긴다</span>
+  <div class="right">
+    <span class="chip" id="providerChip"><span class="dot"></span><span id="providerText">AI 연결 확인 중</span></span>
   </div>
+</header>
 
-  <h2>3. 블록체인 도장 <button class="ghost" id="anchor">지금 찍기</button></h2>
-  <div class="head" id="anchorBox">아직 없음</div>
+<div class="grid">
+  <!-- ── 채팅 ── -->
+  <section class="chat">
+    <div class="chat-head">
+      <div class="avatar"><svg viewBox="0 0 24 24" fill="none" stroke="#9DB4FF" stroke-width="2" stroke-linecap="round"><path d="M12 2v3M5 8h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z"/><circle cx="9" cy="14" r="1.2" fill="#9DB4FF"/><circle cx="15" cy="14" r="1.2" fill="#9DB4FF"/></svg></div>
+      <div>
+        <div class="name">마트 쇼핑 도우미</div>
+        <div class="sub">상품을 찾아드려요 · <span id="chatSub">결제 권한: 없음</span></div>
+      </div>
+    </div>
+
+    <div class="msgs" id="msgs">
+      <div class="row ai">
+        <div class="avatar"><svg viewBox="0 0 24 24" fill="none" stroke="#9DB4FF" stroke-width="2" stroke-linecap="round"><path d="M12 2v3M5 8h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z"/><circle cx="9" cy="14" r="1.2" fill="#9DB4FF"/><circle cx="15" cy="14" r="1.2" fill="#9DB4FF"/></svg></div>
+        <div class="bubble">안녕하세요! 무엇을 찾아드릴까요?</div>
+      </div>
+    </div>
+
+    <div class="composer">
+      <div class="chips">
+        <button data-q="계란 찾아줘">계란 찾아줘</button>
+        <button data-q="우유 하나 사줘">우유 하나 사줘</button>
+        <button data-q="식빵 있어?">식빵 있어?</button>
+      </div>
+      <div class="inrow">
+        <input type="text" id="msg" placeholder="메시지를 입력하세요" autocomplete="off">
+        <button id="send" title="보내기"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 증거 ── -->
+  <aside class="side">
+    <div class="sec">
+      <h2>증거 장부 <span class="n" id="count">-</span></h2>
+      <p class="hint">AI의 결제 시도는 허용이든 차단이든 전부 여기 남습니다. 각 줄은 앞 줄의 지문을 품고 있어 고치면 뒤가 전부 어긋납니다.</p>
+      <div class="ledger" id="ledger"></div>
+      <div class="headbox">마지막 지문<div class="h" id="headHash">-</div></div>
+    </div>
+    <div class="sec">
+      <h2>블록체인 도장</h2>
+      <p class="hint">장부의 마지막 지문을 XRPL 테스트넷에 적어둡니다. 우리도 못 고치는 곳이라, 장부를 조작하면 여기와 안 맞게 됩니다.</p>
+      <div class="stamp" id="stamp"></div>
+      <div class="cmd" id="cmd" title="클릭하면 복사"></div>
+    </div>
+  </aside>
 </div>
 
 <script>
-// 응답 봉투 {resultType, data, exception}를 풀어 data만 돌려주고, 실패면 예외 메시지를 던진다
-async function call(path, options) {
-  const res = await fetch(path, options);
-  const body = await res.json();
-  if (body.resultType !== 'SUCCESS') {
-    const ex = body.exception || {};
-    throw new Error((ex.code || res.status) + ' ' + (ex.message || ''));
+(function () {
+  'use strict';
+
+  // ── 공용 ──────────────────────────────────────────────
+  // 텍스트는 전부 textContent로만 넣는다. innerHTML에 데이터를 섞지 않는다(장부는 AI가 만든 값이라 신뢰 못 함).
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) { node.className = cls; }
+    if (text !== undefined && text !== null) { node.textContent = text; }
+    return node;
   }
-  return body.data;
-}
+  function svg(paths, stroke) {
+    var ns = 'http://www.w3.org/2000/svg';
+    var s = document.createElementNS(ns, 'svg');
+    s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('fill', 'none');
+    s.setAttribute('stroke', stroke || 'currentColor'); s.setAttribute('stroke-width', '2');
+    s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
+    for (var i = 0; i < paths.length; i++) { var p = document.createElementNS(ns, 'path'); p.setAttribute('d', paths[i]); s.appendChild(p); }
+    return s;
+  }
+  var ICON = {
+    bot: ['M12 2v3M5 8h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z', 'M9 14h.01M15 14h.01'],
+    user: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'],
+    search: ['M21 21l-4.3-4.3', 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z'],
+    card: ['M2 7h20v10H2z', 'M2 11h20', 'M6 15h4'],
+    lock: ['M5 11h14v10H5z', 'M8 11V7a4 4 0 0 1 8 0v4'],
+    check: ['M20 6L9 17l-5-5'],
+    box: ['M21 8l-9-5-9 5 9 5 9-5z', 'M3 8v8l9 5 9-5V8', 'M12 13v8']
+  };
+  function short(h) { return h ? h.slice(0, 12) + '…' : '-'; }
+  function timeOf(iso) { return iso ? iso.slice(11, 19) : ''; }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function pace(ms) { return reduced ? sleep(0) : sleep(ms); }
 
-function short(hash) { return hash ? hash.slice(0, 12) + '…' : '-'; }
+  // 응답 봉투 {resultType, data, exception}를 풀고, 실패면 코드·메시지를 실은 예외를 던진다
+  async function call(path, options) {
+    var res = await fetch(path, options);
+    var body = await res.json();
+    if (body.resultType !== 'SUCCESS') {
+      var ex = body.exception || {};
+      var err = new Error(ex.message || ('HTTP ' + res.status));
+      err.code = ex.code || String(res.status);
+      throw err;
+    }
+    return body.data;
+  }
 
-async function sendChat() {
-  const btn = document.getElementById('send');
-  const box = document.getElementById('steps');
-  btn.disabled = true;
-  box.innerHTML = '<div class="step muted">AI가 생각하는 중…</div>';
-  try {
-    const data = await call('/api/v1/agent/chat', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: document.getElementById('msg').value })
-    });
+  // ── 채팅 ──────────────────────────────────────────────
+  var msgs = document.getElementById('msgs');
+  var input = document.getElementById('msg');
+  var sendBtn = document.getElementById('send');
+  var busy = false;
+
+  function scrollDown() { msgs.scrollTop = msgs.scrollHeight; }
+
+  function avatar(kind) {
+    var a = el('div', 'avatar');
+    a.appendChild(svg(kind === 'me' ? ICON.user : ICON.bot, kind === 'me' ? '#fff' : '#9DB4FF'));
+    return a;
+  }
+  function addRow(kind, node) {
+    var row = el('div', 'row ' + kind);
+    if (kind === 'me' || kind === 'ai') { row.appendChild(avatar(kind)); }
+    row.appendChild(node);
+    msgs.appendChild(row);
+    scrollDown();
+    return row;
+  }
+  function addBubble(kind, text) { return addRow(kind, el('div', 'bubble', text)); }
+  function addSystem(text, isError) {
+    var row = addRow('sys' + (isError ? ' err' : ''), el('div', 'bubble', text));
+    return row;
+  }
+  function showTyping() {
+    var t = el('div', 'bubble typing');
+    t.appendChild(el('i')); t.appendChild(el('i')); t.appendChild(el('i'));
+    return addRow('ai', t);
+  }
+
+  // "search_product {"keyword":"계란"}" 같은 문자열을 이름과 JSON으로 나눈다
+  function splitToolCall(content) {
+    var idx = content.indexOf(' ');
+    if (idx < 0) { return { name: content, args: '' }; }
+    return { name: content.slice(0, idx), args: content.slice(idx + 1) };
+  }
+  function prettyArgs(json) {
+    try {
+      var obj = JSON.parse(json);
+      var parts = [];
+      for (var k in obj) { if (Object.prototype.hasOwnProperty.call(obj, k)) { parts.push(k + ': ' + obj[k]); } }
+      return parts.join('  ·  ');
+    } catch (e) { return json; }
+  }
+
+  function toolCallCard(content) {
+    var c = splitToolCall(content);
+    var isPay = c.name === 'pay';
+    var card = el('div', 'tool');
+    var ic = el('div', 'ic'); ic.appendChild(svg(isPay ? ICON.card : ICON.search, '#9DB4FF')); card.appendChild(ic);
+    var body = el('div');
+    body.appendChild(el('div', 't', isPay ? '결제 시도 · pay' : '상품 검색 · search_product'));
+    body.appendChild(el('div', 'v', prettyArgs(c.args)));
+    card.appendChild(body);
+    return card;
+  }
+
+  // "결제 BLOCKED / 사유: NO_PAYMENT_PERMISSION / 장부 순번: 4" 를 해석한다
+  var REASON = { NO_PAYMENT_PERMISSION: '결제 권한 없음', AMOUNT_OVER_LIMIT: '한도 초과', MERCHANT_NOT_ALLOWED: '등록되지 않은 가게', WITHIN_POLICY: '정책 범위 내' };
+  function toolResultCard(content) {
+    var m = /^결제 (BLOCKED|ALLOWED) \/ 사유: (\S+) \/ 장부 순번: (\d+)/.exec(content);
+    if (m) {
+      var blocked = m[1] === 'BLOCKED';
+      var card = el('div', 'tool ' + (blocked ? 'blocked' : 'allowed'));
+      var ic = el('div', 'ic'); ic.appendChild(svg(blocked ? ICON.lock : ICON.check, '#fff')); card.appendChild(ic);
+      var body = el('div');
+      body.appendChild(el('div', 't', blocked ? '결제 차단됨' : '결제 허용됨'));
+      var v = el('div', 'v', (REASON[m[2]] || m[2]));
+      v.appendChild(el('small', null, '장부 #' + m[3] + '에 기록됨 — 이 시도는 이제 지울 수 없습니다'));
+      body.appendChild(v);
+      card.appendChild(body);
+      return card;
+    }
+    var plain = el('div', 'tool result');
+    var ic2 = el('div', 'ic'); ic2.appendChild(svg(ICON.box, '#9DB4FF')); plain.appendChild(ic2);
+    var b2 = el('div');
+    b2.appendChild(el('div', 't', '검색 결과'));
+    b2.appendChild(el('div', 'v', content));
+    plain.appendChild(b2);
+    return plain;
+  }
+
+  async function playSteps(steps) {
+    if (!steps || steps.length === 0) {
+      addSystem('AI가 아무 말도 하지 않았어요. 다시 시도해 보세요.', false);
+      return;
+    }
+    for (var i = 0; i < steps.length; i++) {
+      var s = steps[i];
+      if (s.kind === 'ASSISTANT') {
+        var typing = showTyping();
+        await pace(700);
+        typing.remove();
+        addBubble('ai', s.content);
+        await pace(500);
+      } else if (s.kind === 'TOOL_CALL') {
+        addRow('ai', toolCallCard(s.content));
+        await pace(650);
+      } else if (s.kind === 'TOOL_RESULT') {
+        addRow('ai', toolResultCard(s.content));
+        await pace(900);
+      }
+    }
+  }
+
+  async function send(text) {
+    if (busy) { return; }
+    var q = (text || input.value).trim();
+    if (!q) { return; }
+    busy = true; sendBtn.disabled = true; input.value = '';
+    addBubble('me', q);
+    var typing = showTyping();
+    try {
+      var data = await call('/api/v1/agent/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: q })
+      });
+      typing.remove();
+      await playSteps(data.steps);
+      await loadLedger(true);
+      await loadAnchor();
+    } catch (e) {
+      typing.remove();
+      if (e.code === 'AGENT_NOT_CONFIGURED') {
+        addSystem('AI API 키가 설정되지 않았어요. 서버를 GEMINI_API_KEY(또는 ANTHROPIC_API_KEY)와 함께 다시 실행해 주세요.', true);
+      } else {
+        addSystem('AI 호출 실패 (' + e.code + '): ' + String(e.message).slice(0, 160), true);
+      }
+    } finally {
+      busy = false; sendBtn.disabled = false; input.focus();
+    }
+  }
+
+  sendBtn.addEventListener('click', function () { send(); });
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { send(); } });
+  var chips = document.querySelectorAll('.chips button');
+  for (var i = 0; i < chips.length; i++) {
+    chips[i].addEventListener('click', function (e) { send(e.currentTarget.getAttribute('data-q')); });
+  }
+
+  // ── 장부 ──────────────────────────────────────────────
+  var knownSeq = 0;
+  var lastHead = null;
+  var PROVIDER = { anthropic: 'Claude', google: 'Gemini' };
+
+  async function loadLedger(animateNew) {
+    var box = document.getElementById('ledger');
+    try {
+      var records = await call('/api/v1/ledger/records');
+      box.innerHTML = '';
+      if (records.length === 0) { box.appendChild(el('div', 'empty', '아직 기록이 없습니다')); }
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        var row = el('div', 'rec' + (animateNew && r.seq > knownSeq ? ' new' : ''));
+        row.appendChild(el('div', 'seq', '#' + r.seq));
+        var mid = el('div');
+        var who = el('div', 'who');
+        who.appendChild(el('b', null, PROVIDER[r.agent.provider] || r.agent.provider));
+        who.appendChild(document.createTextNode(' · ' + r.agent.model + ' · ' + timeOf(r.at)));
+        mid.appendChild(who);
+        mid.appendChild(el('div', 'what', r.attempt.item + '  ' + Number(r.attempt.amount).toLocaleString() + r.attempt.currency + '  @ ' + r.attempt.merchant));
+        mid.appendChild(el('div', 'hash', short(r.hash) + '  ←  ' + short(r.prevHash)));
+        row.appendChild(mid);
+        row.appendChild(el('span', 'badge ' + r.decision, r.decision === 'BLOCKED' ? '차단' : '허용'));
+        box.appendChild(row);
+      }
+      var last = records.length ? records[records.length - 1] : null;
+      knownSeq = last ? last.seq : 0;
+      lastHead = last ? last.hash : null;
+      document.getElementById('count').textContent = records.length + '건';
+      document.getElementById('headHash').textContent = lastHead ? lastHead : '장부가 비어 있음';
+      if (last) {
+        document.getElementById('providerText').textContent = (PROVIDER[last.agent.provider] || last.agent.provider) + ' · ' + last.agent.model;
+        document.getElementById('providerChip').classList.add('on');
+      }
+      if (animateNew) { box.lastChild && box.lastChild.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); }
+    } catch (e) {
+      box.innerHTML = '';
+      box.appendChild(el('div', 'empty', '장부를 불러오지 못했습니다: ' + e.message));
+    }
+  }
+
+  // ── 도장 ──────────────────────────────────────────────
+  var anchorBusy = false;
+  function renderStamp(a) {
+    var box = document.getElementById('stamp');
+    var cmd = document.getElementById('cmd');
     box.innerHTML = '';
-    if (data.steps.length === 0) {
-      box.innerHTML = '<div class="step muted">AI가 아무 단계도 남기지 않았음</div>';
+    var stale = a && lastHead && a.hash !== lastHead;
+    box.className = 'stamp ' + (a ? (stale ? 'stale' : 'ok') : '');
+
+    var st = el('div', 'st'); st.appendChild(el('span', 'dot'));
+    st.appendChild(document.createTextNode(!a ? '아직 도장이 없습니다' : (stale ? '장부가 도장보다 앞서 있습니다' : '장부와 도장이 일치합니다')));
+    box.appendChild(st);
+
+    if (a) {
+      var kv1 = el('div', 'kv', '장부 #' + a.seq + ' 지문 ' + short(a.hash) + ' · ' + a.anchoredAt.slice(0, 19).replace('T', ' '));
+      box.appendChild(kv1);
+      var kv2 = el('div', 'kv', 'XRPL 트랜잭션 ');
+      var link = el('a', null, a.txHash);
+      link.href = 'https://testnet.xrpl.org/transactions/' + encodeURIComponent(a.txHash);
+      link.target = '_blank'; link.rel = 'noopener';
+      kv2.appendChild(link);
+      box.appendChild(kv2);
+      if (stale) { box.appendChild(el('div', 'kv', '새 기록이 생겼습니다. 다시 찍어야 검증이 통과합니다.')); }
     }
-    for (const step of data.steps) {
-      const div = document.createElement('div');
-      div.className = 'step ' + step.kind;
-      if (step.kind === 'TOOL_RESULT' && !step.content.startsWith('결제 BLOCKED')) { div.classList.add('ok'); }
-      const label = { ASSISTANT: 'AI', TOOL_CALL: 'AI가 도구 호출', TOOL_RESULT: '우리 제품의 응답' }[step.kind] || step.kind;
-      div.innerHTML = '<span class="k">' + label + '</span>' + escapeHtml(step.content);
-      box.appendChild(div);
+    var btn = el('button', null, a && !stale ? '다시 찍기' : '지금 찍기');
+    btn.disabled = anchorBusy || !lastHead;
+    btn.addEventListener('click', anchorNow);
+    box.appendChild(btn);
+
+    cmd.innerHTML = '';
+    if (a) {
+      cmd.appendChild(el('span', 'lbl', '서버 없이 검증 (클릭하면 복사)'));
+      var text = './gradlew verifyLedger -q --args="data/ledger.jsonl keys/ed25519.public --anchor-tx ' + a.txHash + '"';
+      cmd.appendChild(document.createTextNode(text));
+      cmd.onclick = function () { navigator.clipboard && navigator.clipboard.writeText(text); cmd.querySelector('.lbl').textContent = '복사됨 ✓'; };
     }
-    await loadLedger();
-  } catch (e) {
-    box.innerHTML = '<div class="step err">' + escapeHtml(e.message) + '</div>';
-  } finally {
-    btn.disabled = false;
   }
-}
-
-async function loadLedger() {
-  const rows = document.getElementById('rows');
-  const head = document.getElementById('head');
-  try {
-    const records = await call('/api/v1/ledger/records');
-    rows.innerHTML = '';
-    for (const r of records) {
-      const tr = document.createElement('tr');
-      tr.innerHTML =
-        '<td>' + r.seq + '</td>' +
-        '<td class="mono">' + escapeHtml(r.at.slice(0, 19).replace('T', ' ')) + '</td>' +
-        '<td>' + escapeHtml(r.agent.provider + ' / ' + r.agent.model) + '</td>' +
-        '<td>' + escapeHtml(r.attempt.item + ' ' + r.attempt.amount.toLocaleString() + r.attempt.currency + ' @ ' + r.attempt.merchant) + '</td>' +
-        '<td><span class="pill ' + r.decision + '">' + r.decision + '</span></td>' +
-        '<td>' + escapeHtml(r.reason) + '</td>' +
-        '<td class="mono" title="' + escapeHtml(r.hash) + '">' + escapeHtml(short(r.hash)) + '</td>';
-      rows.appendChild(tr);
+  async function loadAnchor() {
+    try { renderStamp(await call('/api/v1/anchor/latest')); }
+    catch (e) { renderStamp(null); }
+  }
+  async function anchorNow() {
+    if (anchorBusy) { return; }
+    anchorBusy = true;
+    var box = document.getElementById('stamp');
+    var b = box.querySelector('button'); if (b) { b.disabled = true; b.textContent = '테스트넷에 쓰는 중… (첫 실행은 30초쯤)'; }
+    try {
+      await call('/api/v1/anchor', { method: 'POST' });
+      await loadAnchor();
+    } catch (e) {
+      addSystem('도장 실패 (' + e.code + '): ' + String(e.message).slice(0, 160), true);
+      anchorBusy = false;
+      await loadAnchor();
+      return;
     }
-    if (records.length === 0) {
-      head.innerHTML = '마지막 지문: <span class="mono muted">장부가 비어 있음</span>';
-    } else {
-      const last = records[records.length - 1];
-      head.innerHTML = '마지막 지문 (#' + last.seq + '): <span class="mono">' + escapeHtml(last.hash) + '</span>';
-    }
-  } catch (e) {
-    head.innerHTML = '<span class="err">' + escapeHtml(e.message) + '</span>';
+    anchorBusy = false;
   }
-}
 
-async function loadAnchor() {
-  const box = document.getElementById('anchorBox');
-  try {
-    const a = await call('/api/v1/anchor/latest');
-    box.innerHTML = '#' + a.seq + ' 지문 <span class="mono">' + escapeHtml(short(a.hash)) + '</span> → 트랜잭션 ' +
-      '<a class="mono" target="_blank" href="https://testnet.xrpl.org/transactions/' + escapeHtml(a.txHash) + '">' + escapeHtml(short(a.txHash)) + '</a>' +
-      ' <span class="muted">(' + escapeHtml(a.anchoredAt.slice(0, 19).replace('T', ' ')) + ')</span>';
-  } catch (e) {
-    box.innerHTML = '<span class="muted">아직 없음</span>';
-  }
-}
-
-async function anchorNow() {
-  const btn = document.getElementById('anchor');
-  const box = document.getElementById('anchorBox');
-  btn.disabled = true;
-  box.innerHTML = '<span class="muted">테스트넷에 쓰는 중… (첫 실행은 30초쯤)</span>';
-  try {
-    await call('/api/v1/anchor', { method: 'POST' });
-    await loadAnchor();
-  } catch (e) {
-    box.innerHTML = '<span class="err">' + escapeHtml(e.message) + '</span>';
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, function (c) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-  });
-}
-
-document.getElementById('send').addEventListener('click', sendChat);
-document.getElementById('msg').addEventListener('keydown', function (e) { if (e.key === 'Enter') { sendChat(); } });
-document.getElementById('reload').addEventListener('click', loadLedger);
-document.getElementById('anchor').addEventListener('click', anchorNow);
-loadLedger();
-loadAnchor();
+  // ── 시작 ──────────────────────────────────────────────
+  loadLedger(false).then(loadAnchor);
+  input.focus();
+})();
 </script>
 </body>
 </html>
