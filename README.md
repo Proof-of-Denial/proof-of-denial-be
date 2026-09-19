@@ -24,12 +24,15 @@ TRUST404 해커톤 트랙 3 (오프체인 의사결정 검증) 제출물.
 ```
 pod/
 ├── ProofOfDenialApplication.kt
-├── config/            Clock, PrivateKey 빈
+├── config/            Clock, PrivateKey, Claude, XRPL 빈
 └── app/
-    ├── domain/        record/(엔티티·RecordRepository·RecordService), verify/(LedgerVerifyService), crypto/(해시·서명 포트)
-    ├── application/   LedgerFacade + dto/
-    ├── infrastructure/ crypto/(CanonicalJsonHasher, Ed25519*), repository/record/persistence/RecordRepositoryImpl
-    └── interfaces/    common/(CommonRes), exception/, record/(controller·req·res), cli/(keygen, verifyLedger)
+    ├── domain/        record/, verify/(LedgerVerifyService), crypto/(해시·서명 포트),
+    │                  product/, guard/(결제 가드 규칙), agent/(AgentTools·AgentStep 포트), anchor/(ChainAnchor 포트)
+    ├── application/   LedgerFacade, AgentFacade, AnchorFacade + dto/
+    ├── infrastructure/ crypto/(CanonicalJsonHasher, Ed25519*), llm/(ClaudeChatModel), chain/(XrplChainAnchor),
+    │                  repository/record, repository/product, repository/anchor
+    └── interfaces/    common/(CommonRes), exception/, cli/(keygen, verifyLedger),
+                       record/(controller·req·res), agent/(controller·req·res), anchor/(controller·res)
 ```
 
 의존 방향은 interfaces → application → domain ← infrastructure. 검증 CLI는 Spring 없이 infrastructure를 직접 조립해 domain 서비스를 부른다.
@@ -78,7 +81,7 @@ sed -i '' '2d' data/ledger.jsonl
 #   ✗ #3  PREV_MISMATCH: 앞 지문이 …
 cp /tmp/backup.jsonl data/ledger.jsonl
 
-# 3) 마지막 지문을 외부 값과 대조 (블록체인 앵커 자리 — 지금은 파일에서 뽑아 손으로 넣는다)
+# 3) 마지막 지문을 외부 값과 대조 (실제로는 블록체인 앵커로 대체한다 — 아래 "데모: 초록불" 참고)
 HEAD_HASH=$(tail -1 data/ledger.jsonl | sed 's/.*"hash":"\([^"]*\)".*/\1/')
 ./gradlew verifyLedger -q --args="data/ledger.jsonl keys/ed25519.public --expect-head $HEAD_HASH"
 #   결과: 진짜, 안 고쳐짐
@@ -98,11 +101,11 @@ HEAD_HASH=$(tail -1 data/ledger.jsonl | sed 's/.*"hash":"\([^"]*\)".*/\1/')
 트랜잭션 메모에서 지문을 읽어와 대조한다. **CLI는 이때도 우리 서버에 접속하지 않는다.** 접속하는 건
 XRPL 공개 RPC뿐이다 — 그게 "제3자가 독립적으로 검증한다"는 것의 의미다.
 
-```bash
-# 서버 켠 상태에서 장부 3건 + 도장
-bash demo/seed.sh                      # 마지막 줄이 anchor 응답 → txHash 복사
+저장소를 그대로 클론해도 재현된다 — `data/ledger.jsonl`, `data/anchors.jsonl`이 커밋돼 있고, 아래
+트랜잭션이 그 장부의 마지막 지문을 실제로 찍은 것이다. 서버를 켤 필요도 없다:
 
-# 서버 끄고, 체인만 보고 검증
+```bash
+# 클론한 그대로, 서버 없이 체인만 보고 검증
 ./gradlew verifyLedger -q --args="data/ledger.jsonl keys/ed25519.public --anchor-tx 56ECC6987765C507025C4B934284E365029349CB4F973E36F48D658C78C039A6"
 #   블록체인 도장: 56ECC6987765C507025C4B934284E365029349CB4F973E36F48D658C78C039A6 → 73bc9a390452…
 #   ✓ #1 ✓ #2 ✓ #3 → 결과: 진짜, 안 고쳐짐
@@ -110,9 +113,13 @@ bash demo/seed.sh                      # 마지막 줄이 anchor 응답 → txHa
 # 장부를 고치면(예: 마지막 줄을 지워도 앞 두 줄은 자체 검증은 통과) 도장과 마지막 지문이 달라 HEAD_MISMATCH
 ```
 
+`bash demo/seed.sh`를 다시 돌리면 새 기록이 장부에 추가되고 마지막 지문(head)이 바뀐다 — 그러면 위
+트랜잭션은 더 이상 맞지 않는다. 그럴 땐 `POST /api/v1/anchor`로 새로 도장을 찍고, 그 응답의 `txHash`로
+`--anchor-tx`를 바꿔서 검증해야 한다.
+
 실제로 찍힌 도장을 익스플로러에서 확인: https://testnet.xrpl.org/transactions/56ECC6987765C507025C4B934284E365029349CB4F973E36F48D658C78C039A6
 
-메모: `pod:v1:3:73bc9a3904522cea9575cccebffeab2cf4e28838ff52005dbec0a83d1c2617ce` (현재 `data/ledger.jsonl` 3건의 마지막 지문과 같음).
+메모: `pod:v1:3:73bc9a3904522cea9575cccebffeab2cf4e28838ff52005dbec0a83d1c2617ce` (커밋된 `data/ledger.jsonl` 3건의 마지막 지문과 같음).
 
 XRPL 계정은 yml `xrpl.passphrase`(기본값 ``)에서 결정적으로 파생된다 —
 **실제 제출 전에는 환경변수 `XRPL_PASSPHRASE`로 반드시 바꿔라.** faucet(`faucet.altnet.rippletest.net`)이

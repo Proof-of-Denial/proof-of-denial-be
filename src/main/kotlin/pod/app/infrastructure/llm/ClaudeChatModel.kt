@@ -2,6 +2,7 @@ package pod.app.infrastructure.llm
 
 import com.anthropic.client.AnthropicClient
 import com.anthropic.core.JsonValue
+import com.anthropic.core.jsonMapper
 import com.anthropic.models.messages.ContentBlockParam
 import com.anthropic.models.messages.Message
 import com.anthropic.models.messages.MessageCreateParams
@@ -111,7 +112,7 @@ class ClaudeChatModel(
     /** 도구 하나를 실행하고 AI에게 돌려줄 문자열을 만든다. 호출·결과는 대화 기록에도 남긴다. */
     private fun executeTool(toolUse: ToolUseBlock, agent: AgentInfo, tools: AgentTools, steps: MutableList<AgentStep>): String {
         val input = toolUse._input()
-        val rawInput = input.toString()
+        val rawInput = jsonMapper().writeValueAsString(input)
         steps.add(AgentStep(AgentStepKind.TOOL_CALL, toolUse.name() + " " + rawInput))
 
         val resultText: String
@@ -167,10 +168,18 @@ class ClaudeChatModel(
             return 0L
         }
         val number = value.asNumber()
-        if (!number.isPresent) {
-            return 0L
+        if (number.isPresent) {
+            return number.get().toLong()
         }
-        return number.get().toLong()
+        val text = value.asString()
+        if (text.isPresent) {
+            val parsed = text.get().toLongOrNull()
+            if (parsed != null) {
+                return parsed
+            }
+        }
+        logger.warn("숫자 필드 파싱 실패 name={} value={}", name, value)
+        return 0L
     }
 
     private fun searchProductTool(): Tool {

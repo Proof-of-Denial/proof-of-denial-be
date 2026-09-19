@@ -20,6 +20,7 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
+import java.net.http.HttpResponse
 import java.net.http.HttpResponse.BodyHandlers
 import java.nio.file.Files
 import java.nio.file.Path
@@ -40,6 +41,7 @@ class RecordControllerTest {
             Files.writeString(dir.resolve("ed25519.private"), Ed25519Keys.encodePrivate(keyPair.private))
             registry.add("ledger.file") { dir.resolve("ledger.jsonl").toString() }
             registry.add("ledger.private-key") { dir.resolve("ed25519.private").toString() }
+            registry.add("anchor.file") { dir.resolve("anchors.jsonl").toString() }
         }
     }
 
@@ -52,7 +54,7 @@ class RecordControllerTest {
         return "http://localhost:${env.getProperty("local.server.port")}$path"
     }
 
-    private fun post(body: String): java.net.http.HttpResponse<String> {
+    private fun post(body: String): HttpResponse<String> {
         return http.send(
             HttpRequest.newBuilder(URI(url("/api/v1/ledger/records")))
                 .header("Content-Type", "application/json")
@@ -61,7 +63,7 @@ class RecordControllerTest {
         )
     }
 
-    private fun get(path: String): java.net.http.HttpResponse<String> {
+    private fun get(path: String): HttpResponse<String> {
         return http.send(
             HttpRequest.newBuilder(URI(url(path))).GET().build(),
             BodyHandlers.ofString(),

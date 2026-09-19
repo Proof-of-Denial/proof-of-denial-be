@@ -86,6 +86,9 @@ async function sendChat() {
       body: JSON.stringify({ message: document.getElementById('msg').value })
     });
     box.innerHTML = '';
+    if (data.steps.length === 0) {
+      box.innerHTML = '<div class="step muted">AI가 아무 단계도 남기지 않았음</div>';
+    }
     for (const step of data.steps) {
       const div = document.createElement('div');
       div.className = 'step ' + step.kind;
@@ -117,14 +120,14 @@ async function loadLedger() {
         '<td>' + escapeHtml(r.attempt.item + ' ' + r.attempt.amount.toLocaleString() + r.attempt.currency + ' @ ' + r.attempt.merchant) + '</td>' +
         '<td><span class="pill ' + r.decision + '">' + r.decision + '</span></td>' +
         '<td>' + escapeHtml(r.reason) + '</td>' +
-        '<td class="mono" title="' + r.hash + '">' + short(r.hash) + '</td>';
+        '<td class="mono" title="' + escapeHtml(r.hash) + '">' + escapeHtml(short(r.hash)) + '</td>';
       rows.appendChild(tr);
     }
     if (records.length === 0) {
       head.innerHTML = '마지막 지문: <span class="mono muted">장부가 비어 있음</span>';
     } else {
       const last = records[records.length - 1];
-      head.innerHTML = '마지막 지문 (#' + last.seq + '): <span class="mono">' + last.hash + '</span>';
+      head.innerHTML = '마지막 지문 (#' + last.seq + '): <span class="mono">' + escapeHtml(last.hash) + '</span>';
     }
   } catch (e) {
     head.innerHTML = '<span class="err">' + escapeHtml(e.message) + '</span>';
@@ -135,8 +138,8 @@ async function loadAnchor() {
   const box = document.getElementById('anchorBox');
   try {
     const a = await call('/api/v1/anchor/latest');
-    box.innerHTML = '#' + a.seq + ' 지문 <span class="mono">' + short(a.hash) + '</span> → 트랜잭션 ' +
-      '<a class="mono" target="_blank" href="https://testnet.xrpl.org/transactions/' + a.txHash + '">' + short(a.txHash) + '</a>' +
+    box.innerHTML = '#' + a.seq + ' 지문 <span class="mono">' + escapeHtml(short(a.hash)) + '</span> → 트랜잭션 ' +
+      '<a class="mono" target="_blank" href="https://testnet.xrpl.org/transactions/' + escapeHtml(a.txHash) + '">' + escapeHtml(short(a.txHash)) + '</a>' +
       ' <span class="muted">(' + escapeHtml(a.anchoredAt.slice(0, 19).replace('T', ' ')) + ')</span>';
   } catch (e) {
     box.innerHTML = '<span class="muted">아직 없음</span>';

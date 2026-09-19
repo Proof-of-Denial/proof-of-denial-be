@@ -43,7 +43,7 @@ class XrplChainAnchor(
         private const val MIN_BALANCE_DROPS = 20_000_000L
         private const val FUND_WAIT_ATTEMPTS = 10
         private const val FUND_WAIT_MILLIS = 2000L
-        private const val TX_LOOKUP_ATTEMPTS = 15
+        private const val TX_LOOKUP_ATTEMPTS = 3
         private const val TX_LOOKUP_WAIT_MILLIS = 2000L
         private const val MEMO_PREFIX = "pod:v1:"
 
@@ -114,7 +114,6 @@ class XrplChainAnchor(
             }
             return extractHead(result.transaction().memos())
         } catch (exception: JsonRpcClientErrorException) {
-            logger.info("트랜잭션 아직 조회되지 않음: {}", exception.message)
             return null
         }
     }
