@@ -6,3 +6,9 @@ spring:
 ledger:
   file: data/ledger.jsonl
   private-key: keys/ed25519.private
+
+# 결제 가드 규칙. 데모는 payment-allowed=false라 항상 차단된다.
+guard:
+  payment-allowed: false
+  max-amount: 10000
+  allowed-merchants: 마트A
