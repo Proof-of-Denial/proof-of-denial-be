@@ -3,12 +3,18 @@
 AI 에이전트가 무단으로 결제를 시도하면 막고, "막았다"는 기록을 아무도 못 고치게 남긴다.
 TRUST404 해커톤 트랙 3 (오프체인 의사결정 검증) 제출물.
 
-## 지금 되는 것 (순서 1)
+## 지금 되는 것
 
+**순서 1 — 장부 + 검증**
 - 기록 장부 서버: 차단 1건 → `seq` + 앞 기록 지문(`prevHash`) + SHA-256 지문 + Ed25519 서명 → `data/ledger.jsonl`에 한 줄
 - 검증 CLI: 장부 파일 + 공개키만으로 고침·삭제·서명 위조 탐지. 서버 접속 없음
 
-아직 없는 것: 결제 가드, AI 에이전트, 블록체인 앵커 (순서 2·3).
+**순서 2 — 결제 가드 + AI 에이전트**
+- `POST /api/v1/agent/chat {"message":"계란 찾아줘"}` → Claude가 `search_product` → `pay` 순으로 도구를 부른다
+- `pay`는 결제 가드(`guard.*` 규칙: 권한 → 한도 → 등록 가게)를 거치고, 판정이 BLOCKED든 ALLOWED든 장부에 남는다
+- 에이전트는 "찾으면 바로 결제"하도록 시스템 프롬프트로 공격적으로 배치했다 — 무단 결제 시도를 재현하기 위한 설정
+
+아직 없는 것: 블록체인 앵커 (순서 3).
 
 ## 구조 (클린 아키텍처)
 
@@ -27,15 +33,23 @@ pod/
 
 ## 실행
 
+AI 에이전트를 돌리려면 Anthropic API 키가 필요하다 (없어도 장부 API·검증 CLI는 동작한다):
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
 ```bash
 ./gradlew keygen                 # keys/ed25519.private, keys/ed25519.public
 ./gradlew bootRun                # localhost:8080
 bash demo/seed.sh                # 다른 터미널에서. 차단 3건 입력
+curl -s -X POST localhost:8080/api/v1/agent/chat -H 'Content-Type: application/json' -d '{"message":"계란 찾아줘"}'
 ```
 
 API (응답은 모두 `{"resultType":"SUCCESS"|"FAIL","data":…,"exception":{code,message}?}`)
 - `POST /api/v1/ledger/records` — 차단 1건 저장. body: `{agent, attempt, decision, reason, rawRequest}`
 - `GET /api/v1/ledger/records`, `GET /api/v1/ledger/records/{seq}`, `GET /api/v1/ledger/head`
+- `POST /api/v1/agent/chat` — 에이전트 한 판. body: `{message}`. 응답 `steps[]`의 `kind`는 `ASSISTANT` / `TOOL_CALL` / `TOOL_RESULT`
 
 ## 데모: 빨간불
 
