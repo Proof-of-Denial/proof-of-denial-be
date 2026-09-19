@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proof of Denial — 시연</title>
+<style>
+  :root { --bg:#F6F7F4; --panel:#fff; --ink:#1B1D22; --muted:#5F646E; --line:#D8DBD5; --blue:#2B4C7E; --blue-soft:#E6EDF7; --red:#B3261E; --red-soft:#FBEAE8; --green:#2E7D4F; --green-soft:#E4F3EA; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif; }
+  .wrap { max-width:960px; margin:0 auto; padding:28px 20px 80px; }
+  h1 { font-size:1.6rem; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 24px; }
+  h2 { font-size:1.1rem; margin:32px 0 10px; }
+  .row { display:flex; gap:8px; }
+  input[type=text] { flex:1; font:inherit; padding:10px 12px; border:1px solid var(--line); border-radius:8px; }
+  button { font:inherit; padding:10px 16px; border:0; border-radius:8px; background:var(--blue); color:#fff; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  button.ghost { background:var(--panel); color:var(--blue); border:1px solid var(--line); }
+  .steps { display:grid; gap:8px; margin-top:12px; }
+  .step { padding:10px 14px; border-radius:10px; border:1px solid var(--line); background:var(--panel); white-space:pre-wrap; word-break:break-all; }
+  .step .k { font-size:.72rem; letter-spacing:.08em; color:var(--muted); display:block; margin-bottom:2px; }
+  .step.ASSISTANT { border-left:4px solid var(--blue); }
+  .step.TOOL_CALL { border-left:4px solid #8A6100; background:#FBF1D6; }
+  .step.TOOL_RESULT { border-left:4px solid var(--red); background:var(--red-soft); }
+  .step.TOOL_RESULT.ok { border-left-color:var(--green); background:var(--green-soft); }
+  table { width:100%; border-collapse:collapse; background:var(--panel); font-size:.92rem; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-size:.78rem; letter-spacing:.04em; }
+  td.mono, span.mono { font-family:ui-monospace,Menlo,monospace; font-size:.85rem; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:999px; font-size:.78rem; font-weight:600; }
+  .pill.BLOCKED { background:var(--red-soft); color:var(--red); }
+  .pill.ALLOWED { background:var(--green-soft); color:var(--green); }
+  .head { padding:12px 14px; background:var(--blue-soft); border-radius:10px; }
+  .err { color:var(--red); }
+  .muted { color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Proof of Denial</h1>
+  <p class="sub">AI가 몰래 결제하려 한 걸 막고, 그 기록을 아무도 못 고치게 남긴다</p>
+
+  <h2>1. AI에게 시켜보기</h2>
+  <div class="row">
+    <input type="text" id="msg" value="계란 찾아줘">
+    <button id="send">보내기</button>
+  </div>
+  <div class="steps" id="steps"></div>
+
+  <h2>2. 장부 <button class="ghost" id="reload">새로고침</button></h2>
+  <div class="head" id="head">마지막 지문: <span class="mono muted">-</span></div>
+  <div style="overflow-x:auto;margin-top:10px">
+    <table>
+      <thead><tr><th>#</th><th>시각</th><th>누가</th><th>뭘</th><th>판정</th><th>사유</th><th>지문</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <h2>3. 블록체인 도장 <button class="ghost" id="anchor">지금 찍기</button></h2>
+  <div class="head" id="anchorBox">아직 없음</div>
+</div>
+
+<script>
+// 응답 봉투 {resultType, data, exception}를 풀어 data만 돌려주고, 실패면 예외 메시지를 던진다
+async function call(path, options) {
+  const res = await fetch(path, options);
+  const body = await res.json();
+  if (body.resultType !== 'SUCCESS') {
+    const ex = body.exception || {};
+    throw new Error((ex.code || res.status) + ' ' + (ex.message || ''));
+  }
+  return body.data;
+}
+
+function short(hash) { return hash ? hash.slice(0, 12) + '…' : '-'; }
+
+async function sendChat() {
+  const btn = document.getElementById('send');
+  const box = document.getElementById('steps');
+  btn.disabled = true;
+  box.innerHTML = '<div class="step muted">AI가 생각하는 중…</div>';
+  try {
+    const data = await call('/api/v1/agent/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: document.getElementById('msg').value })
+    });
+    box.innerHTML = '';
+    for (const step of data.steps) {
+      const div = document.createElement('div');
+      div.className = 'step ' + step.kind;
+      if (step.kind === 'TOOL_RESULT' && !step.content.startsWith('결제 BLOCKED')) { div.classList.add('ok'); }
+      const label = { ASSISTANT: 'AI', TOOL_CALL: 'AI가 도구 호출', TOOL_RESULT: '우리 제품의 응답' }[step.kind] || step.kind;
+      div.innerHTML = '<span class="k">' + label + '</span>' + escapeHtml(step.content);
+      box.appendChild(div);
+    }
+    await loadLedger();
+  } catch (e) {
+    box.innerHTML = '<div class="step err">' + escapeHtml(e.message) + '</div>';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadLedger() {
+  const rows = document.getElementById('rows');
+  const head = document.getElementById('head');
+  try {
+    const records = await call('/api/v1/ledger/records');
+    rows.innerHTML = '';
+    for (const r of records) {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + r.seq + '</td>' +
+        '<td class="mono">' + escapeHtml(r.at.slice(0, 19).replace('T', ' ')) + '</td>' +
+        '<td>' + escapeHtml(r.agent.provider + ' / ' + r.agent.model) + '</td>' +
+        '<td>' + escapeHtml(r.attempt.item + ' ' + r.attempt.amount.toLocaleString() + r.attempt.currency + ' @ ' + r.attempt.merchant) + '</td>' +
+        '<td><span class="pill ' + r.decision + '">' + r.decision + '</span></td>' +
+        '<td>' + escapeHtml(r.reason) + '</td>' +
+        '<td class="mono" title="' + r.hash + '">' + short(r.hash) + '</td>';
+      rows.appendChild(tr);
+    }
+    if (records.length === 0) {
+      head.innerHTML = '마지막 지문: <span class="mono muted">장부가 비어 있음</span>';
+    } else {
+      const last = records[records.length - 1];
+      head.innerHTML = '마지막 지문 (#' + last.seq + '): <span class="mono">' + last.hash + '</span>';
+    }
+  } catch (e) {
+    head.innerHTML = '<span class="err">' + escapeHtml(e.message) + '</span>';
+  }
+}
+
+async function loadAnchor() {
+  const box = document.getElementById('anchorBox');
+  try {
+    const a = await call('/api/v1/anchor/latest');
+    box.innerHTML = '#' + a.seq + ' 지문 <span class="mono">' + short(a.hash) + '</span> → 트랜잭션 ' +
+      '<a class="mono" target="_blank" href="https://testnet.xrpl.org/transactions/' + a.txHash + '">' + short(a.txHash) + '</a>' +
+      ' <span class="muted">(' + escapeHtml(a.anchoredAt.slice(0, 19).replace('T', ' ')) + ')</span>';
+  } catch (e) {
+    box.innerHTML = '<span class="muted">아직 없음</span>';
+  }
+}
+
+async function anchorNow() {
+  const btn = document.getElementById('anchor');
+  const box = document.getElementById('anchorBox');
+  btn.disabled = true;
+  box.innerHTML = '<span class="muted">테스트넷에 쓰는 중… (첫 실행은 30초쯤)</span>';
+  try {
+    await call('/api/v1/anchor', { method: 'POST' });
+    await loadAnchor();
+  } catch (e) {
+    box.innerHTML = '<span class="err">' + escapeHtml(e.message) + '</span>';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+document.getElementById('send').addEventListener('click', sendChat);
+document.getElementById('msg').addEventListener('keydown', function (e) { if (e.key === 'Enter') { sendChat(); } });
+document.getElementById('reload').addEventListener('click', loadLedger);
+document.getElementById('anchor').addEventListener('click', anchorNow);
+loadLedger();
+loadAnchor();
+</script>
+</body>
+</html>

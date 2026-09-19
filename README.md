@@ -119,6 +119,12 @@ XRPL 계정은 yml `xrpl.passphrase`(기본값 ``)에서 결정적으로 파생�
 TLS 핸드셰이크에서 중간 인증서를 안 보내는 문제가 있어 `bootRun`과 `verifyLedger` 두 Gradle 태스크 모두
 `jvmArgs("-Dcom.sun.security.enableAIAcaIssuers=true")`를 켜 둔다 (`build.gradle.kts`).
 
+## 시연 화면
+
+서버 실행 후(`./gradlew bootRun`) `http://localhost:8080/` 를 열면 AI에게 말 걸기 → 장부 표 → 블록체인 도장이
+한 화면에 나온다. 정적 파일 하나(`src/main/resources/static/index.html`)이고 빌드 단계가 없다 — Spring Boot가
+그대로 서빙한다.
+
 ## 기록 한 줄
 
 ```json
