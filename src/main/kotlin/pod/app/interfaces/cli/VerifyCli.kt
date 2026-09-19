@@ -1,6 +1,7 @@
 package pod.app.interfaces.cli
 
 import pod.app.domain.verify.LedgerVerifyService
+import pod.app.domain.verify.Problem
 import pod.app.infrastructure.crypto.CanonicalJsonHasher
 import pod.app.infrastructure.crypto.Ed25519Keys
 import pod.app.infrastructure.crypto.Ed25519SignatureVerifier
@@ -34,7 +35,14 @@ fun main(args: Array<String>) {
     val focusSeq = optionValue(args, "--seq")?.toLongOrNull()
     val expectHead = optionValue(args, "--expect-head")
 
-    val records = RecordRepositoryImpl(ledgerPath.toString()).findAll()
+    // 장부는 사람이 손으로 고칠 수 있는 파일이라, 형식이 깨진 줄이 있어도 스택트레이스 없이 문제로 보고한다.
+    val records = try {
+        RecordRepositoryImpl(ledgerPath.toString()).findAll()
+    } catch (e: Exception) {
+        println("장부 줄을 읽을 수 없음 — 형식이 깨졌습니다: ${e.message?.lineSequence()?.firstOrNull()}")
+        println("결과: 문제 1건")
+        exitProcess(1)
+    }
     val publicKey = Ed25519Keys.decodePublic(Files.readString(publicKeyPath))
     val verifyService = LedgerVerifyService(CanonicalJsonHasher(), Ed25519SignatureVerifier(publicKey))
     val result = verifyService.verify(records, expectHead)
@@ -43,8 +51,14 @@ fun main(args: Array<String>) {
     val headPreview = if (result.head == null) "-" else result.head.take(12) + "…"
     println("기록 ${result.count}건 · 마지막 지문 $headPreview")
     println()
+    // problems는 기록 순서대로 쌓인다. seq로 다시 필터링하면 같은 seq가 두 번(삭제 후 중복) 나올 때
+    // 모든 문제가 두 줄 모두에 겹쳐 붙으므로, 앞에서부터 하나씩 소비해 제자리에만 붙인다.
+    val remaining = result.problems.filter { it.seq != null }.toMutableList()
     for (record in records) {
-        val problemsOfThisRecord = result.problems.filter { it.seq == record.seq }
+        val problemsOfThisRecord = mutableListOf<Problem>()
+        while (remaining.isNotEmpty() && remaining.first().seq == record.seq) {
+            problemsOfThisRecord.add(remaining.removeFirst())
+        }
         val mark = if (problemsOfThisRecord.isEmpty()) "✓" else "✗"
         val focus = if (record.seq == focusSeq) "  ◀" else ""
         val amount = "%,d".format(record.attempt.amount)

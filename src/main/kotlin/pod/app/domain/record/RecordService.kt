@@ -23,7 +23,8 @@ class RecordService(
     @Synchronized
     fun append(agent: AgentInfo, attempt: Attempt, decision: Decision, reason: String, rawRequest: String): Record {
         val existing = recordRepository.findAll()
-        val seq = existing.size + 1L
+        // 줄이 하나 지워진 채로 다시 붙는 경우가 있어(데모의 변조 시나리오), 개수가 아니라 마지막 seq에서 이어간다.
+        val seq = (existing.lastOrNull()?.seq ?: 0L) + 1
         val prevHash = existing.lastOrNull()?.hash ?: GENESIS_HASH
         val at = OffsetDateTime.now(clock).toString()
 

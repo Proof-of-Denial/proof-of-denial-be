@@ -75,6 +75,17 @@ class LedgerVerifyServiceTest {
     }
 
     @Test
+    fun `기록을 통째로 복제해 순번이 다시 나오면 SEQ_GAP으로 잡는다`(@TempDir dir: Path) {
+        val (records, keyPair) = chain(dir)
+        // seq 2 기록을 통째로 복제해 끼워 넣는다: 1, 2, 2(복제), 3
+        val duplicated = listOf(records[0], records[1], records[1], records[2])
+        val result = verifier(keyPair).verify(duplicated)
+        assertFalse(result.ok)
+        val duplicateSeqGap = result.problems.first { it.kind == ProblemKind.SEQ_GAP && it.detail.contains("다시 나옴") }
+        assertEquals(2L, duplicateSeqGap.seq)
+    }
+
+    @Test
     fun `두 줄을 연달아 지우면 범위로 알려준다`(@TempDir dir: Path) {
         val (records, keyPair) = chain(dir)
         val onlyLast = records.filter { it.seq == 3L }

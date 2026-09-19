@@ -70,6 +70,10 @@ HEAD_HASH=$(tail -1 data/ledger.jsonl | sed 's/.*"hash":"\([^"]*\)".*/\1/')
 
 `sed -i ''`는 macOS 문법. Linux는 `sed -i`.
 
+`./gradlew verifyLedger`로 돌리면 셸 종료 코드는 항상 0이다 (Gradle 태스크 실패를 데모 화면에서 감추려고 무시하도록 설정했다).
+검증 결과는 오직 위 출력의 `결과:` 줄로 본다. CLI 자체의 종료 코드(정상 0 / 문제 있음 1 / 사용법·파일 오류 2)는
+`java -cp ... pod.app.interfaces.cli.VerifyCliKt ...`처럼 Gradle 없이 직접 실행할 때만 그대로 나온다.
+
 ## 기록 한 줄
 
 ```json

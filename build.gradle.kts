@@ -55,4 +55,7 @@ tasks.register<JavaExec>("verifyLedger") {
 	description = "장부 검증. --args=\"data/ledger.jsonl keys/ed25519.public [--seq N] [--expect-head HASH]\""
 	classpath = sourceSets["main"].runtimeClasspath
 	mainClass.set("pod.app.interfaces.cli.VerifyCliKt")
+	// CLI는 문제를 찾으면 exit 1로 끝난다. Gradle이 그걸 태스크 실패로 보고 "FAILURE: Build failed" 블록을
+	// 결과 줄 아래에 덧붙이는데, 그러면 데모 화면에서 정작 봐야 할 "결과: 문제 N건"이 묻힌다.
+	isIgnoreExitValue = true
 }

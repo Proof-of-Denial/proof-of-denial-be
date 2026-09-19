@@ -109,4 +109,14 @@ class RecordControllerTest {
         assertEquals(ResultType.FAIL, body.resultType)
         assertEquals("VALIDATION_ERROR", body.exception?.code)
     }
+
+    @Test
+    fun `seq 경로 파라미터가 숫자가 아니면 500이 아니라 400과 INVALID_REQUEST_PARAMETER`() {
+        // append 하지 않는 테스트라 다른 테스트가 공유하는 장부에 영향을 주지 않는다.
+        val response = get("/api/v1/ledger/records/abc")
+        assertEquals(400, response.statusCode())
+        val body = json.readValue<CommonRes<Any?>>(response.body())
+        assertEquals(ResultType.FAIL, body.resultType)
+        assertEquals("INVALID_REQUEST_PARAMETER", body.exception?.code)
+    }
 }

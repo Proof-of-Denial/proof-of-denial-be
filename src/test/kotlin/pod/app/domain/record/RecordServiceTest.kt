@@ -7,6 +7,7 @@ import pod.app.infrastructure.crypto.Ed25519Keys
 import pod.app.infrastructure.crypto.Ed25519SignatureVerifier
 import pod.app.infrastructure.crypto.Ed25519Signer
 import pod.app.infrastructure.repository.record.persistence.RecordRepositoryImpl
+import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.time.Clock
@@ -81,6 +82,26 @@ class RecordServiceTest {
         val second = service(dir, keyPair).append(agent, attempt, Decision.BLOCKED, "NO_PAYMENT_PERMISSION", "{}")
         assertEquals(2L, second.seq)
         assertEquals(first.hash, second.prevHash)
+    }
+
+    @Test
+    fun `줄이 하나 지워진 채로 다시 붙이면 seq는 개수가 아니라 마지막 기록에서 이어간다`(@TempDir dir: Path) {
+        val keyPair = Ed25519Keys.generate()
+        val attempt = Attempt("pay", "우유", 3200, "KRW", "마트A")
+        val ledgerFile = dir.resolve("ledger.jsonl")
+        val serviceForSeeding = service(dir, keyPair)
+        serviceForSeeding.append(agent, attempt, Decision.BLOCKED, "NO_PAYMENT_PERMISSION", "{}") // seq 1
+        serviceForSeeding.append(agent, attempt, Decision.BLOCKED, "NO_PAYMENT_PERMISSION", "{}") // seq 2 (곧 삭제)
+        val seq3 = serviceForSeeding.append(agent, attempt, Decision.BLOCKED, "NO_PAYMENT_PERMISSION", "{}") // seq 3
+
+        // 가운데 줄(seq 2)만 파일에서 직접 지운다. sed 대신 표준 파일 API로.
+        val linesWithoutSeq2 = Files.readAllLines(ledgerFile).filterNot { it.contains("\"seq\":2,") }
+        Files.write(ledgerFile, linesWithoutSeq2)
+
+        val seq4 = service(dir, keyPair).append(agent, attempt, Decision.BLOCKED, "NO_PAYMENT_PERMISSION", "{}")
+
+        assertEquals(4L, seq4.seq)
+        assertEquals(seq3.hash, seq4.prevHash)
     }
 
     @Test

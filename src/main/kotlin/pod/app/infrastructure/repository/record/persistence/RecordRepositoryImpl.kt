@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Repository
 import pod.app.domain.record.Record
 import pod.app.domain.record.RecordRepository
+import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.kotlinModule
 import tools.jackson.module.kotlin.readValue
@@ -15,6 +16,7 @@ import java.nio.file.StandardOpenOption.CREATE
 /** 한 줄 저장용. 필드 순서는 Record 선언 순서(seq, prevHash, at, …). 지문 계산은 이 mapper를 쓰지 않는다. */
 private val lineMapper: JsonMapper = JsonMapper.builder()
     .addModule(kotlinModule())
+    .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
     .build()
 
 /**
