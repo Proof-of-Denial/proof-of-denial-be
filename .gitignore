@@ -1,0 +1,8 @@
+build/
+.gradle/
+.idea/
+*.iml
+data/
+keys/ed25519.private
+.DS_Store
+.omc/
