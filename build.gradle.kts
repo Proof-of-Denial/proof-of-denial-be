@@ -49,3 +49,10 @@ tasks.register<JavaExec>("keygen") {
 	mainClass.set("pod.app.interfaces.cli.KeygenCliKt")
 	args = listOf("keys")
 }
+
+tasks.register<JavaExec>("verifyLedger") {
+	group = "pod"
+	description = "장부 검증. --args=\"data/ledger.jsonl keys/ed25519.public [--seq N] [--expect-head HASH]\""
+	classpath = sourceSets["main"].runtimeClasspath
+	mainClass.set("pod.app.interfaces.cli.VerifyCliKt")
+}
