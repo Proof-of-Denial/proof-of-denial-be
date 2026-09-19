@@ -24,12 +24,12 @@ TRUST404 해커톤 트랙 3 (오프체인 의사결정 검증) 제출물.
 ```
 pod/
 ├── ProofOfDenialApplication.kt
-├── config/            Clock, PrivateKey, Claude, XRPL 빈
+├── config/            Clock, PrivateKey, Claude, Gemini, XRPL 빈
 └── app/
     ├── domain/        record/, verify/(LedgerVerifyService), crypto/(해시·서명 포트),
     │                  product/, guard/(결제 가드 규칙), agent/(AgentTools·AgentStep 포트), anchor/(ChainAnchor 포트)
     ├── application/   LedgerFacade, AgentFacade, AnchorFacade + dto/
-    ├── infrastructure/ crypto/(CanonicalJsonHasher, Ed25519*), llm/(ClaudeChatModel), chain/(XrplChainAnchor),
+    ├── infrastructure/ crypto/(CanonicalJsonHasher, Ed25519*), llm/(ClaudeChatModel, GeminiChatModel), chain/(XrplChainAnchor),
     │                  repository/record, repository/product, repository/anchor
     └── interfaces/    common/(CommonRes), exception/, cli/(keygen, verifyLedger),
                        record/(controller·req·res), agent/(controller·req·res), anchor/(controller·res)
@@ -39,11 +39,16 @@ pod/
 
 ## 실행
 
-AI 에이전트를 돌리려면 Anthropic API 키가 필요하다 (없어도 장부 API·검증 CLI는 동작한다):
+AI 에이전트를 돌리려면 API 키가 필요하다 (없어도 장부 API·검증 CLI는 동작한다). 기본은 Claude, `AGENT_PROVIDER=gemini`로 바꾸면 Gemini가 대신 돈다:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
+# 또는
+export AGENT_PROVIDER=gemini
+export GEMINI_API_KEY=AIza...
 ```
+
+장부의 `agent.provider` 필드에 `anthropic` / `google`이 그대로 남으므로, 어느 회사 AI가 무단 결제를 시도했는지가 증거에 남는다 — 이게 이 프로젝트의 요점과 맞물린다.
 
 ```bash
 ./gradlew keygen                 # keys/ed25519.private, keys/ed25519.public
