@@ -4,10 +4,12 @@ import com.anthropic.client.AnthropicClient
 import com.anthropic.client.okhttp.AnthropicOkHttpClient
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Configuration
 
 /** Claude SDK 클라이언트. 키가 비어 있어도 서버는 떠야 하므로(장부 API는 키가 필요 없다) 자리표시 키로 만든다. */
 @Configuration
+@ConditionalOnProperty(name = ["agent.provider"], havingValue = "claude", matchIfMissing = true)
 class ClaudeConfig {
 
     @Bean

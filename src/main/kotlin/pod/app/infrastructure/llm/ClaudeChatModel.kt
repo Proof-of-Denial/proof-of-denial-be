@@ -56,7 +56,7 @@ class ClaudeChatModel(
 
     override fun run(sessionId: String, userMessage: String, tools: AgentTools): List<AgentStep> {
         if (apiKey.isBlank()) {
-            throw ApiException(ExceptionCode.AGENT_NOT_CONFIGURED)
+            throw ApiException(ExceptionCode.AGENT_NOT_CONFIGURED, "ANTHROPIC_API_KEY가 설정되지 않았습니다.")
         }
 
         val steps = ArrayList<AgentStep>()
