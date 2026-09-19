@@ -448,11 +448,15 @@
     var box = document.getElementById('stamp');
     var cmd = document.getElementById('cmd');
     box.innerHTML = '';
-    var stale = a && lastHead && a.hash !== lastHead;
-    box.className = 'stamp ' + (a ? (stale ? 'stale' : 'ok') : '');
+    // 장부가 비었으면 남아 있는 도장은 과거 기록의 것이라 "일치"가 아니다
+    var emptyLedger = !lastHead;
+    var stale = a && !emptyLedger && a.hash !== lastHead;
+    var state = !a ? 'none' : (emptyLedger ? 'orphan' : (stale ? 'stale' : 'ok'));
+    box.className = 'stamp ' + (state === 'ok' ? 'ok' : (state === 'stale' || state === 'orphan' ? 'stale' : ''));
 
+    var LABEL = { none: '아직 도장이 없습니다', orphan: '장부가 비어 있습니다 — 기록이 생기면 다시 찍으세요', stale: '장부가 도장보다 앞서 있습니다', ok: '장부와 도장이 일치합니다' };
     var st = el('div', 'st'); st.appendChild(el('span', 'dot'));
-    st.appendChild(document.createTextNode(!a ? '아직 도장이 없습니다' : (stale ? '장부가 도장보다 앞서 있습니다' : '장부와 도장이 일치합니다')));
+    st.appendChild(document.createTextNode(LABEL[state]));
     box.appendChild(st);
 
     if (a) {
