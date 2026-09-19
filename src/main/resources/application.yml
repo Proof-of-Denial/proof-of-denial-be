@@ -21,3 +21,9 @@ anthropic:
 # 도장(체인 앵커) 영수증 파일 위치.
 anchor:
   file: data/anchors.jsonl
+
+# XRPL 테스트넷. 비밀 문구로 계정을 만든다 — 제출 전에 XRPL_PASSPHRASE를 바꿔라.
+xrpl:
+  rpc-url: https://s.altnet.rippletest.net:51234/
+  faucet-url: https://faucet.altnet.rippletest.net
+  passphrase: ${XRPL_PASSPHRASE:}

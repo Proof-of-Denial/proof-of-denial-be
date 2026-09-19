@@ -24,6 +24,9 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("tools.jackson.module:jackson-module-kotlin")
 	implementation("com.anthropic:anthropic-java:2.34.0")
+	implementation(platform("org.xrpl:xrpl4j-bom:5.0.0"))
+	implementation("org.xrpl:xrpl4j-client")
+	implementation("org.xrpl:xrpl4j-core")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -37,6 +40,13 @@ kotlin {
 
 springBoot {
 	mainClass.set("pod.ProofOfDenialApplicationKt")
+}
+
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+	// XRPL 테스트넷 faucet(faucet.altnet.rippletest.net)이 TLS 핸드셰이크에서 중간 인증서를 보내지 않는다.
+	// curl/브라우저는 OS가 캐시해둔 중간 인증서로 넘어가지만 JVM 기본 검증기는 그게 없으면 막힌다.
+	// AIA(Authority Info Access)로 빠진 인증서를 받아오게 허용 — 검증 자체를 끄는 게 아니라 체인을 완성해줄 뿐이다.
+	jvmArgs("-Dcom.sun.security.enableAIAcaIssuers=true")
 }
 
 tasks.withType<Test> {
