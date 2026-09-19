@@ -26,4 +26,8 @@ enum class ExceptionCode(
     // 에이전트 관련
     AGENT_NOT_CONFIGURED("AGENT_NOT_CONFIGURED", "ANTHROPIC_API_KEY가 설정되지 않았습니다.", HttpStatus.SERVICE_UNAVAILABLE),
     AGENT_FAILED("AGENT_FAILED", "AI 에이전트 호출에 실패했습니다.", HttpStatus.BAD_GATEWAY),
+
+    // 앵커 관련
+    ANCHOR_NOT_FOUND("ANCHOR_NOT_FOUND", "아직 찍힌 도장이 없습니다.", HttpStatus.NOT_FOUND),
+    ANCHOR_FAILED("ANCHOR_FAILED", "블록체인 기록에 실패했습니다.", HttpStatus.BAD_GATEWAY),
 }
