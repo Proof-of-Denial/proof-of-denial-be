@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: proof-of-denial
+
+# 장부 파일과 서명 키 위치. 둘 다 프로젝트 루트 기준 상대경로.
+ledger:
+  file: data/ledger.jsonl
+  private-key: keys/ed25519.private
