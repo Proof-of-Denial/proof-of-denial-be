@@ -1,5 +1,6 @@
 package pod.app.infrastructure.chain
 
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.xrpl.xrpl4j.client.JsonRpcClientErrorException
@@ -7,6 +8,8 @@ import org.xrpl.xrpl4j.client.XrplClient
 import org.xrpl.xrpl4j.client.faucet.FaucetClient
 import org.xrpl.xrpl4j.client.faucet.FundAccountRequest
 import org.xrpl.xrpl4j.crypto.keys.KeyPair
+import org.xrpl.xrpl4j.crypto.keys.Passphrase
+import org.xrpl.xrpl4j.crypto.keys.Seed
 import org.xrpl.xrpl4j.crypto.signing.bc.BcSignatureService
 import org.xrpl.xrpl4j.model.client.accounts.AccountInfoRequestParams
 import org.xrpl.xrpl4j.model.client.fees.FeeUtils
@@ -43,6 +46,18 @@ class XrplChainAnchor(
         private const val TX_LOOKUP_ATTEMPTS = 15
         private const val TX_LOOKUP_WAIT_MILLIS = 2000L
         private const val MEMO_PREFIX = "pod:v1:"
+
+        // 검증 CLI는 Spring 없이 readHead만 쓴다. faucet·서명은 절대 호출되지 않으므로
+        // 네트워크 호출 없는 더미 faucetClient·keyPair로 채워 생성자를 그대로 재사용한다.
+        private const val READ_ONLY_PASSPHRASE = "pod-verify-cli-readonly-unused"
+
+        fun forReadOnly(rpcUrl: String): XrplChainAnchor {
+            val xrplClient = XrplClient(rpcUrl.toHttpUrl())
+            val faucetClient = FaucetClient.construct(rpcUrl.toHttpUrl())
+            val seed = Seed.ed25519SeedFromPassphrase(Passphrase.of(READ_ONLY_PASSPHRASE))
+            val keyPair = seed.deriveKeyPair()
+            return XrplChainAnchor(xrplClient, faucetClient, keyPair)
+        }
     }
 
     override fun writeHead(seq: Long, hash: String): ChainWriteResult {

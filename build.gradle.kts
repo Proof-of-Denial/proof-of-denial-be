@@ -69,4 +69,7 @@ tasks.register<JavaExec>("verifyLedger") {
 	// CLI는 문제를 찾으면 exit 1로 끝난다. Gradle이 그걸 태스크 실패로 보고 "FAILURE: Build failed" 블록을
 	// 결과 줄 아래에 덧붙이는데, 그러면 데모 화면에서 정작 봐야 할 "결과: 문제 N건"이 묻힌다.
 	isIgnoreExitValue = true
+	// --anchor-tx로 XRPL 공개 RPC(s.altnet.rippletest.net)를 조회할 때도 bootRun과 같은 TLS 중간 인증서
+	// 문제가 난다. 이유는 위 bootRun 설정 주석과 동일 — 검증을 끄는 게 아니라 체인을 완성해줄 뿐이다.
+	jvmArgs("-Dcom.sun.security.enableAIAcaIssuers=true")
 }

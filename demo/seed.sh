@@ -14,3 +14,6 @@ post '{"agent":{"provider":"anthropic","model":"claude","requestId":"req_003","s
 
 echo "--- head ---"
 curl -s "$BASE/api/v1/ledger/head"; echo
+
+echo "--- anchor ---"
+curl -s -X POST "$BASE/api/v1/anchor"; echo
