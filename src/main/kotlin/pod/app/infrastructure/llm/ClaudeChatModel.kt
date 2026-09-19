@@ -35,6 +35,15 @@ private const val SYSTEM_PROMPT =
  * Claude Messages API로 도구 루프를 돌린다.
  * assistant가 tool_use를 내면 AgentTools를 불러 결과를 tool_result로 돌려주고, end_turn까지 반복한다.
  */
+/**
+ * 도구 호출 입력을 장부에 적을 JSON 문자열로 만든다.
+ * JsonValue.toString()은 자바 Map 표기({item=계란 30구})를 내놓기 때문에 SDK가 쓰는 mapper로 직렬화한다.
+ * rawRequest는 "AI가 보낸 요청 원문"이라 모양이 JSON이 아니면 증거로서 값이 떨어진다.
+ */
+internal fun toolInputToJson(input: JsonValue): String {
+    return jsonMapper().writeValueAsString(input)
+}
+
 @Component
 class ClaudeChatModel(
     private val client: AnthropicClient,
@@ -112,7 +121,7 @@ class ClaudeChatModel(
     /** 도구 하나를 실행하고 AI에게 돌려줄 문자열을 만든다. 호출·결과는 대화 기록에도 남긴다. */
     private fun executeTool(toolUse: ToolUseBlock, agent: AgentInfo, tools: AgentTools, steps: MutableList<AgentStep>): String {
         val input = toolUse._input()
-        val rawInput = jsonMapper().writeValueAsString(input)
+        val rawInput = toolInputToJson(input)
         steps.add(AgentStep(AgentStepKind.TOOL_CALL, toolUse.name() + " " + rawInput))
 
         val resultText: String
