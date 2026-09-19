@@ -33,12 +33,18 @@ class RecordController(
     }
 
     override fun getRecord(seq: Long): CommonRes<RecordRes> {
-        val dto = ledgerFacade.getRecord(seq) ?: throw ApiException(ExceptionCode.RECORD_NOT_FOUND, "seq=$seq")
+        val dto = ledgerFacade.getRecord(seq)
+        if (dto == null) {
+            throw ApiException(ExceptionCode.RECORD_NOT_FOUND, "seq=$seq")
+        }
         return CommonRes.success(RecordRes.from(dto))
     }
 
     override fun getHead(): CommonRes<HeadRes> {
-        val dto = ledgerFacade.getHead() ?: throw ApiException(ExceptionCode.LEDGER_EMPTY)
+        val dto = ledgerFacade.getHead()
+        if (dto == null) {
+            throw ApiException(ExceptionCode.LEDGER_EMPTY)
+        }
         return CommonRes.success(HeadRes.from(dto))
     }
 }

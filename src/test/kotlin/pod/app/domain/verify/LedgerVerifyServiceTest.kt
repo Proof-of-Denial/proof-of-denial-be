@@ -25,7 +25,9 @@ class LedgerVerifyServiceTest {
     private val hasher = CanonicalJsonHasher()
     private val agent = AgentInfo("anthropic", "claude", "req_1", "s1")
 
-    private fun verifier(keyPair: KeyPair) = LedgerVerifyService(hasher, Ed25519SignatureVerifier(keyPair.public))
+    private fun verifier(keyPair: KeyPair): LedgerVerifyService {
+        return LedgerVerifyService(hasher, Ed25519SignatureVerifier(keyPair.public))
+    }
 
     /** 정상 장부 3건 + 키쌍 */
     private fun chain(dir: Path): Pair<List<Record>, KeyPair> {

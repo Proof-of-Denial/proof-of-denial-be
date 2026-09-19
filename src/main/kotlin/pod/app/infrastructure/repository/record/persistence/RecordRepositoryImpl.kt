@@ -31,14 +31,18 @@ class RecordRepositoryImpl(
     private val path: Path = Path.of(ledgerFile)
 
     override fun findAll(): List<Record> {
-        if (!Files.exists(path)) return emptyList()
-        return Files.readAllLines(path)
-            .filter { it.isNotBlank() }
-            .map { lineMapper.readValue<Record>(it) }
+        if (!Files.exists(path)) {
+            return emptyList()
+        }
+        val nonBlankLines = Files.readAllLines(path).filter { it.isNotBlank() }
+        return nonBlankLines.map { lineMapper.readValue<Record>(it) }
     }
 
     override fun save(record: Record) {
-        path.parent?.let { Files.createDirectories(it) }
+        val parent = path.parent
+        if (parent != null) {
+            Files.createDirectories(parent)
+        }
         Files.writeString(path, lineMapper.writeValueAsString(record) + "\n", CREATE, APPEND)
     }
 }

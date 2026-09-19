@@ -22,12 +22,18 @@ class LedgerFacade(
     }
 
     fun getRecord(seq: Long): RecordDto? {
-        val record = recordService.findBySeq(seq) ?: return null
+        val record = recordService.findBySeq(seq)
+        if (record == null) {
+            return null
+        }
         return RecordDto.from(record)
     }
 
     fun getHead(): HeadDto? {
-        val head = recordService.head() ?: return null
+        val head = recordService.head()
+        if (head == null) {
+            return null
+        }
         return HeadDto.from(head)
     }
 }

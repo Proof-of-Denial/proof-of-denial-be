@@ -48,19 +48,25 @@ class RecordControllerTest {
 
     private val http = HttpClient.newHttpClient()
     private val json: JsonMapper = JsonMapper.builder().addModule(kotlinModule()).build()
-    private fun url(path: String) = "http://localhost:${env.getProperty("local.server.port")}$path"
+    private fun url(path: String): String {
+        return "http://localhost:${env.getProperty("local.server.port")}$path"
+    }
 
-    private fun post(body: String) = http.send(
-        HttpRequest.newBuilder(URI(url("/api/v1/ledger/records")))
-            .header("Content-Type", "application/json")
-            .POST(BodyPublishers.ofString(body)).build(),
-        BodyHandlers.ofString(),
-    )
+    private fun post(body: String): java.net.http.HttpResponse<String> {
+        return http.send(
+            HttpRequest.newBuilder(URI(url("/api/v1/ledger/records")))
+                .header("Content-Type", "application/json")
+                .POST(BodyPublishers.ofString(body)).build(),
+            BodyHandlers.ofString(),
+        )
+    }
 
-    private fun get(path: String) = http.send(
-        HttpRequest.newBuilder(URI(url(path))).GET().build(),
-        BodyHandlers.ofString(),
-    )
+    private fun get(path: String): java.net.http.HttpResponse<String> {
+        return http.send(
+            HttpRequest.newBuilder(URI(url(path))).GET().build(),
+            BodyHandlers.ofString(),
+        )
+    }
 
     private val sample = """
         {"agent":{"provider":"anthropic","model":"claude","requestId":"req_1","sessionId":"s1"},

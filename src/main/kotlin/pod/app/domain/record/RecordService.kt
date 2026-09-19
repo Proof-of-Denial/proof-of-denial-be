@@ -24,8 +24,15 @@ class RecordService(
     fun append(agent: AgentInfo, attempt: Attempt, decision: Decision, reason: String, rawRequest: String): Record {
         val existing = recordRepository.findAll()
         // 줄이 하나 지워진 채로 다시 붙는 경우가 있어(데모의 변조 시나리오), 개수가 아니라 마지막 seq에서 이어간다.
-        val seq = (existing.lastOrNull()?.seq ?: 0L) + 1
-        val prevHash = existing.lastOrNull()?.hash ?: GENESIS_HASH
+        val lastRecord = existing.lastOrNull()
+        var lastSeq = 0L
+        var lastHash = GENESIS_HASH
+        if (lastRecord != null) {
+            lastSeq = lastRecord.seq
+            lastHash = lastRecord.hash
+        }
+        val seq = lastSeq + 1
+        val prevHash = lastHash
         val at = OffsetDateTime.now(clock).toString()
 
         val body = HashBody(seq, prevHash, at, agent, attempt, decision, reason, rawRequest)
@@ -47,7 +54,10 @@ class RecordService(
     }
 
     fun head(): Head? {
-        val last = recordRepository.findAll().lastOrNull() ?: return null
+        val last = recordRepository.findAll().lastOrNull()
+        if (last == null) {
+            return null
+        }
         return Head(last.seq, last.hash)
     }
 }

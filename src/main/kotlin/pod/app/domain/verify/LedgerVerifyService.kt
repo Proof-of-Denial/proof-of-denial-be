@@ -46,7 +46,11 @@ class LedgerVerifyService(
             prevHash = record.hash
         }
 
-        val head = records.lastOrNull()?.hash
+        val lastRecord = records.lastOrNull()
+        var head: String? = null
+        if (lastRecord != null) {
+            head = lastRecord.hash
+        }
         if (expectHead != null && head != expectHead) {
             problems.add(Problem(null, ProblemKind.HEAD_MISMATCH, "마지막 지문이 블록체인에 적힌 값과 다름"))
         }

@@ -13,13 +13,15 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class RecordRepositoryImplTest {
-    private fun sample(seq: Long, prevHash: String) = Record(
-        seq = seq, prevHash = prevHash, at = "2026-09-20T14:03:11+09:00",
-        agent = AgentInfo("anthropic", "claude", "req_$seq", "s1"),
-        attempt = Attempt("pay", "계란 30구", 5980, "KRW", "마트A"),
-        decision = Decision.BLOCKED, reason = "NO_PAYMENT_PERMISSION", rawRequest = "{}",
-        hash = "ab".repeat(32), signature = "c2ln",
-    )
+    private fun sample(seq: Long, prevHash: String): Record {
+        return Record(
+            seq = seq, prevHash = prevHash, at = "2026-09-20T14:03:11+09:00",
+            agent = AgentInfo("anthropic", "claude", "req_$seq", "s1"),
+            attempt = Attempt("pay", "계란 30구", 5980, "KRW", "마트A"),
+            decision = Decision.BLOCKED, reason = "NO_PAYMENT_PERMISSION", rawRequest = "{}",
+            hash = "ab".repeat(32), signature = "c2ln",
+        )
+    }
 
     @Test
     fun `파일이 없으면 빈 리스트`(@TempDir dir: Path) {

@@ -37,7 +37,11 @@ fun main(args: Array<String>) {
         println("공개키 파일 없음: $publicKeyPath")
         exitProcess(2)
     }
-    val focusSeq = optionValue(args, "--seq")?.toLongOrNull()
+    val seqOption = optionValue(args, "--seq")
+    var focusSeq: Long? = null
+    if (seqOption != null) {
+        focusSeq = seqOption.toLongOrNull()
+    }
     val expectHeadOption = optionValue(args, "--expect-head")
     val anchorTxOption = optionValue(args, "--anchor-tx")
 
@@ -45,7 +49,12 @@ fun main(args: Array<String>) {
     val records = try {
         RecordRepositoryImpl(ledgerPath.toString()).findAll()
     } catch (e: Exception) {
-        println("장부 줄을 읽을 수 없음 — 형식이 깨졌습니다: ${e.message?.lineSequence()?.firstOrNull()}")
+        val message = e.message
+        var firstLine: String? = null
+        if (message != null) {
+            firstLine = message.lineSequence().firstOrNull()
+        }
+        println("장부 줄을 읽을 수 없음 — 형식이 깨졌습니다: $firstLine")
         println("결과: 문제 1건")
         exitProcess(1)
     }

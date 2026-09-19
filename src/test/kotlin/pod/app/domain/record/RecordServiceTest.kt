@@ -21,12 +21,14 @@ class RecordServiceTest {
     private val fixedClock = Clock.fixed(Instant.parse("2026-09-20T05:03:11Z"), ZoneId.of("Asia/Seoul"))
     private val hasher = CanonicalJsonHasher()
 
-    private fun service(dir: Path, keyPair: KeyPair) = RecordService(
-        recordRepository = RecordRepositoryImpl(dir.resolve("ledger.jsonl").toString()),
-        recordHasher = hasher,
-        recordSigner = Ed25519Signer(keyPair.private),
-        clock = fixedClock,
-    )
+    private fun service(dir: Path, keyPair: KeyPair): RecordService {
+        return RecordService(
+            recordRepository = RecordRepositoryImpl(dir.resolve("ledger.jsonl").toString()),
+            recordHasher = hasher,
+            recordSigner = Ed25519Signer(keyPair.private),
+            clock = fixedClock,
+        )
+    }
 
     private val agent = AgentInfo("anthropic", "claude", "req_1", "s1")
 
