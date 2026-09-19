@@ -12,3 +12,8 @@ guard:
   payment-allowed: false
   max-amount: 10000
   allowed-merchants: 마트A
+
+# Claude 호출. 키는 환경변수 ANTHROPIC_API_KEY로만 넣는다. 비어 있으면 /agent/chat만 503.
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: claude-opus-5

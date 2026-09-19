@@ -22,4 +22,8 @@ enum class ExceptionCode(
 
     // 서버
     INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", "서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+
+    // 에이전트 관련
+    AGENT_NOT_CONFIGURED("AGENT_NOT_CONFIGURED", "ANTHROPIC_API_KEY가 설정되지 않았습니다.", HttpStatus.SERVICE_UNAVAILABLE),
+    AGENT_FAILED("AGENT_FAILED", "AI 에이전트 호출에 실패했습니다.", HttpStatus.BAD_GATEWAY),
 }
