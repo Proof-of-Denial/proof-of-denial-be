@@ -20,12 +20,12 @@ anthropic:
 
 # 에이전트 LLM 선택: claude | gemini
 agent:
-  provider: ${AGENT_PROVIDER:claude}
+  provider: ${AGENT_PROVIDER:gemini}
 
 # Gemini. 키는 환경변수 GEMINI_API_KEY로만 넣는다.
 gemini:
   api-key: ${GEMINI_API_KEY:}
-  model: gemini-2.5-flash
+  model: gemini-3.6-flash
 
 # 도장(체인 앵커) 영수증 파일 위치.
 anchor:
