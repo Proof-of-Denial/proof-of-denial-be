@@ -34,6 +34,10 @@ kotlin {
 	}
 }
 
+springBoot {
+	mainClass.set("pod.ProofOfDenialApplicationKt")
+}
+
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
