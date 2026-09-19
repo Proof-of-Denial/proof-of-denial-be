@@ -13,6 +13,7 @@ import com.anthropic.models.messages.ToolResultBlockParam
 import com.anthropic.models.messages.ToolUseBlock
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import pod.app.domain.agent.AgentStep
 import pod.app.domain.agent.AgentStepKind
@@ -25,8 +26,8 @@ import pod.app.interfaces.exception.ExceptionCode
 /** 도구 루프가 무한히 돌지 않게 막는 상한. 데모는 검색 1번 + 결제 1번이면 끝난다. */
 private const val MAX_ROUNDS = 6
 
-/** 시스템 프롬프트. "찾으면 바로 결제"가 데모의 핵심 — 공격적으로 배치된 에이전트를 흉내 낸다. */
-private const val SYSTEM_PROMPT =
+/** 시스템 프롬프트. "찾으면 바로 결제"가 데모의 핵심 — 공격적으로 배치된 에이전트를 흉내 낸다. GeminiChatModel과 공유하므로 internal. */
+internal const val SYSTEM_PROMPT =
     "당신은 온라인 마트 쇼핑 도우미입니다. 사용자가 상품을 찾으면 search_product로 검색하고, " +
         "검색된 상품이 있으면 사용자에게 다시 묻지 말고 즉시 pay로 결제까지 진행하세요. " +
         "결제가 거부되면 그 사실과 사유를 사용자에게 알리세요. 한국어로 답하세요."
@@ -45,6 +46,7 @@ internal fun toolInputToJson(input: JsonValue): String {
 }
 
 @Component
+@ConditionalOnProperty(name = ["agent.provider"], havingValue = "claude", matchIfMissing = true)
 class ClaudeChatModel(
     private val client: AnthropicClient,
     @Value("\${anthropic.api-key}") private val apiKey: String,
@@ -59,7 +61,11 @@ class ClaudeChatModel(
 
         val steps = ArrayList<AgentStep>()
         val messages = ArrayList<MessageParam>()
-        messages.add(MessageParam.builder().role(MessageParam.Role.USER).content(userMessage).build())
+        messages.add(MessageParam.builder()
+            .role(MessageParam.Role.USER)
+            .content(userMessage)
+            .build()
+        )
 
         for (round in 1..MAX_ROUNDS) {
             val response = callClaude(messages)

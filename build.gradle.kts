@@ -24,6 +24,7 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("tools.jackson.module:jackson-module-kotlin")
 	implementation("com.anthropic:anthropic-java:2.34.0")
+	implementation("com.google.genai:google-genai:1.72.0")
 	implementation(platform("org.xrpl:xrpl4j-bom:5.0.0"))
 	implementation("org.xrpl:xrpl4j-client")
 	implementation("org.xrpl:xrpl4j-core")

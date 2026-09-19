@@ -18,6 +18,15 @@ anthropic:
   api-key: ${ANTHROPIC_API_KEY:}
   model: claude-opus-5
 
+# 에이전트 LLM 선택: claude | gemini
+agent:
+  provider: ${AGENT_PROVIDER:claude}
+
+# Gemini. 키는 환경변수 GEMINI_API_KEY로만 넣는다.
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: gemini-2.5-flash
+
 # 도장(체인 앵커) 영수증 파일 위치.
 anchor:
   file: data/anchors.jsonl
