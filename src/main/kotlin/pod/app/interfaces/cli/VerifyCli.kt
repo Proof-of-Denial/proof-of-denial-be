@@ -23,6 +23,10 @@ private const val XRPL_RPC_URL = "https://s.altnet.rippletest.net:51234/"
  * 타임스탬프·로거명 없이 그대로 보여야 한다. (심사 데모 화면 · 파이프 연결)
  */
 fun main(args: Array<String>) {
+    // XRPL 테스트넷 서버가 중간 인증서를 안 내려줘서 JVM 기본 검증이 실패한다(--anchor-tx 조회에 필요).
+    // 이 옵션은 인증서를 AIA로 보충해 체인을 완성할 뿐 검증을 끄지 않는다.
+    System.setProperty("com.sun.security.enableAIAcaIssuers", "true")
+
     if (args.size < 2) {
         println("사용법: verifyLedger --args=\"<ledger.jsonl> <ed25519.public> [--seq N] [--expect-head HASH]\"")
         exitProcess(2)
