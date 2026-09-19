@@ -37,3 +37,11 @@ kotlin {
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
+
+tasks.register<JavaExec>("keygen") {
+	group = "pod"
+	description = "Ed25519 키 한 쌍 생성 → keys/"
+	classpath = sourceSets["main"].runtimeClasspath
+	mainClass.set("pod.app.interfaces.cli.KeygenCliKt")
+	args = listOf("keys")
+}
