@@ -6,3 +6,10 @@ data/
 keys/ed25519.private
 .DS_Store
 .omc/
+
+# Local credentials and environment overrides
+.env
+.env.*
+!.env.example
+src/main/resources/application-local.yml
+src/main/resources/application-local.yaml
