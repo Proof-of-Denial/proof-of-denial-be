@@ -1,4 +1,8 @@
 spring:
+  # 로컬 비밀값은 저장소 밖 파일에서 읽는다: 프로젝트 루트의 application-local.yml (.gitignore 대상).
+  # 파일이 없으면 건너뛰고 환경변수만 본다 — 서버 배포는 그 경로. 환경변수가 있으면 파일보다 우선한다.
+  config:
+    import: optional:file:./application-local.yml
   application:
     name: proof-of-denial
 
