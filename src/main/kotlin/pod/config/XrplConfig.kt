@@ -31,6 +31,7 @@ class XrplConfig {
 
     @Bean
     fun xrplKeyPair(@Value("\${xrpl.passphrase}") passphrase: String): KeyPair {
+        require(passphrase.isNotBlank()) { "XRPL_PASSPHRASE must be configured and non-blank" }
         val seed = Seed.ed25519SeedFromPassphrase(Passphrase.of(passphrase))
         val keyPair = seed.deriveKeyPair()
         val address = keyPair.publicKey().deriveAddress()

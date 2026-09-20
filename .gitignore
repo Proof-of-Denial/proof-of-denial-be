@@ -3,7 +3,7 @@ build/
 .idea/
 *.iml
 data/
-keys/ed25519.private
+keys/
 .DS_Store
 .omc/
 
@@ -13,3 +13,7 @@ keys/ed25519.private
 !.env.example
 src/main/resources/application-local.yml
 src/main/resources/application-local.yaml
+
+# Local build cache and agent planning documents
+.kotlin/
+docs/superpowers/

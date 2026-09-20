@@ -41,7 +41,10 @@ pod/
 
 AI 에이전트를 돌리려면 API 키가 필요하다 (없어도 장부 API·검증 CLI는 동작한다). 기본은 Claude, `AGENT_PROVIDER=gemini`로 바꾸면 Gemini가 대신 돈다:
 
+서버 실행에는 XRPL 테스트넷 계정의 비밀 문구도 필요합니다. 최초 한 번 생성해 안전하게 보관하고, 같은 계정을 사용하려면 동일한 값을 설정하세요.
+
 ```bash
+export XRPL_PASSPHRASE="$(openssl rand -hex 32)"
 export POD_ANTHROPIC_API_KEY=sk-ant-api03-...   # ANTHROPIC_API_KEY 가 아니라 POD_ 접두사 (셸의 다른 토큰과 충돌 방지)
 # 또는
 export AGENT_PROVIDER=gemini
@@ -106,28 +109,27 @@ HEAD_HASH=$(tail -1 data/ledger.jsonl | sed 's/.*"hash":"\([^"]*\)".*/\1/')
 트랜잭션 메모에서 지문을 읽어와 대조한다. **CLI는 이때도 우리 서버에 접속하지 않는다.** 접속하는 건
 XRPL 공개 RPC뿐이다 — 그게 "제3자가 독립적으로 검증한다"는 것의 의미다.
 
-저장소를 그대로 클론해도 재현된다 — `data/ledger.jsonl`, `data/anchors.jsonl`이 커밋돼 있고, 아래
-트랜잭션이 그 장부의 마지막 지문을 실제로 찍은 것이다. 서버를 켤 필요도 없다:
+실행 데이터와 비밀키는 저장소에 포함하지 않습니다. 먼저 위 실행 절차대로 키를 생성하고 서버를 실행한 뒤, 시연 기록과 앵커를 만드세요:
 
 ```bash
-# 클론한 그대로, 서버 없이 체인만 보고 검증
-./gradlew verifyLedger -q --args="data/ledger.jsonl keys/ed25519.public --anchor-tx 56ECC6987765C507025C4B934284E365029349CB4F973E36F48D658C78C039A6"
-#   블록체인 도장: 56ECC6987765C507025C4B934284E365029349CB4F973E36F48D658C78C039A6 → 73bc9a390452…
-#   ✓ #1 ✓ #2 ✓ #3 → 결과: 진짜, 안 고쳐짐
-
-# 장부를 고치면(예: 마지막 줄을 지워도 앞 두 줄은 자체 검증은 통과) 도장과 마지막 지문이 달라 HEAD_MISMATCH
+bash demo/seed.sh
+curl -s -X POST localhost:8080/api/v1/anchor
+# 응답의 data.txHash를 아래 값으로 설정
+TX_HASH="<방금 생성된 트랜잭션 해시>"
+./gradlew verifyLedger -q --args="data/ledger.jsonl keys/ed25519.public --anchor-tx $TX_HASH"
 ```
 
-`bash demo/seed.sh`를 다시 돌리면 새 기록이 장부에 추가되고 마지막 지문(head)이 바뀐다 — 그러면 위
-트랜잭션은 더 이상 맞지 않는다. 그럴 땐 `POST /api/v1/anchor`로 새로 도장을 찍고, 그 응답의 `txHash`로
-`--anchor-tx`를 바꿔서 검증해야 한다.
+검증 CLI는 서버 종료 후에도 로컬 장부와 공개키, XRPL 트랜잭션으로 검증할 수 있습니다.
+장부에 기록을 추가했다면 새 앵커를 생성하고 해당 트랜잭션 해시를 사용하세요.
+
+아래 트랜잭션은 과거 시연의 참고 자료이며, 새로 생성한 로컬 장부와 일치하지 않습니다.
 
 실제로 찍힌 도장을 익스플로러에서 확인: https://testnet.xrpl.org/transactions/56ECC6987765C507025C4B934284E365029349CB4F973E36F48D658C78C039A6
 
-메모: `pod:v1:3:73bc9a3904522cea9575cccebffeab2cf4e28838ff52005dbec0a83d1c2617ce` (커밋된 `data/ledger.jsonl` 3건의 마지막 지문과 같음).
+메모: `pod:v1:3:73bc9a3904522cea9575cccebffeab2cf4e28838ff52005dbec0a83d1c2617ce` (과거 시연 장부 3건의 마지막 지문).
 
-XRPL 계정은 yml `xrpl.passphrase`(기본값 ``)에서 결정적으로 파생된다 —
-**실제 제출 전에는 환경변수 `XRPL_PASSPHRASE`로 반드시 바꿔라.** faucet(`faucet.altnet.rippletest.net`)이
+XRPL 계정은 환경변수 `XRPL_PASSPHRASE`에서 결정적으로 파생됩니다.
+기본 비밀 문구는 없으며, 누락하거나 공백으로 설정하면 서버가 시작되지 않습니다. faucet(`faucet.altnet.rippletest.net`)이
 TLS 핸드셰이크에서 중간 인증서를 안 보내는 문제가 있어 `bootRun`과 `verifyLedger` 두 Gradle 태스크 모두
 `jvmArgs("-Dcom.sun.security.enableAIAcaIssuers=true")`를 켜 둔다 (`build.gradle.kts`).
 

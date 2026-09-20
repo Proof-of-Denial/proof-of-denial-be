@@ -41,6 +41,7 @@ class RecordControllerTest {
             Files.writeString(dir.resolve("ed25519.private"), Ed25519Keys.encodePrivate(keyPair.private))
             registry.add("ledger.file") { dir.resolve("ledger.jsonl").toString() }
             registry.add("ledger.private-key") { dir.resolve("ed25519.private").toString() }
+            registry.add("xrpl.passphrase") { java.util.UUID.randomUUID().toString() }
             registry.add("anchor.file") { dir.resolve("anchors.jsonl").toString() }
         }
     }

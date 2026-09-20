@@ -34,7 +34,7 @@ gemini:
 anchor:
   file: data/anchors.jsonl
 
-# XRPL 테스트넷. 비밀 문구로 계정을 만든다 — 제출 전에 XRPL_PASSPHRASE를 바꿔라.
+# XRPL 테스트넷. XRPL_PASSPHRASE 환경변수는 필수이며 빈 값은 허용하지 않는다.
 xrpl:
   rpc-url: https://s.altnet.rippletest.net:51234/
   faucet-url: https://faucet.altnet.rippletest.net
