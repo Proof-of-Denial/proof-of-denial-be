@@ -18,3 +18,6 @@ src/main/resources/application-local.yaml
 .kotlin/
 docs/superpowers/
 .superpowers/
+
+# 로컬 비밀값 (spring.config.import 로 읽음) — 프로젝트 루트
+/application-local.yml
