@@ -117,6 +117,24 @@
   .badge { padding: 3px 9px; border-radius: 6px; font-size: .74rem; font-weight: 700; letter-spacing: .04em; }
   .badge.BLOCKED { background: var(--red-soft); color: var(--red); }
   .badge.ALLOWED { background: var(--green-soft); color: var(--green); }
+  /* 해시 검산 패널 — 기록을 누르면 "무엇을 해시했는지"를 그대로 보여준다 */
+  .rec { cursor: pointer; }
+  .rec:hover { border-color: var(--accent); }
+  .proof { grid-column: 1 / -1; margin-top: 10px; padding-top: 12px; border-top: 1px dashed var(--line); display: grid; gap: 10px; }
+  .proof .step { display: grid; gap: 4px; }
+  .proof .lbl { font-size: .74rem; color: var(--muted); letter-spacing: .04em; }
+  .proof .lbl b { color: var(--ink); font-weight: 600; }
+  .proof .src { font: .68rem/1.65 var(--mono); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 9px 11px; max-height: 150px; overflow: auto; word-break: break-all; white-space: pre-wrap; color: var(--muted); }
+  .proof .src mark { background: transparent; color: var(--ink); font-weight: 600; }
+  .proof .cut { display: flex; gap: 6px; flex-wrap: wrap; }
+  .proof .cut span { font: .68rem var(--mono); padding: 2px 7px; border-radius: 4px; background: var(--red-soft); color: var(--red); }
+  .proof .cmp { display: grid; gap: 3px; font: .68rem/1.6 var(--mono); }
+  .proof .cmp div { display: grid; grid-template-columns: 86px 1fr; gap: 8px; }
+  .proof .cmp i { font-style: normal; color: var(--muted); font-family: var(--sans); font-size: .72rem; }
+  .proof .cmp .v { word-break: break-all; }
+  .proof .verdict { font-size: .8rem; font-weight: 600; padding: 7px 10px; border-radius: 6px; }
+  .proof .verdict.ok { background: var(--green-soft); color: var(--green); }
+  .proof .verdict.no { background: var(--red-soft); color: var(--red); }
   .headbox { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font-size: .8rem; color: var(--muted); }
   .headbox .h { font: .78rem var(--mono); color: var(--ink); word-break: break-all; margin-top: 2px; }
 
@@ -196,7 +214,7 @@
   <aside class="side">
     <div class="sec">
       <h2>증거 장부 <span class="n" id="count">-</span></h2>
-      <p class="hint">AI의 결제 시도는 허용이든 차단이든 전부 여기 남습니다. 각 줄은 앞 줄의 지문을 품고 있어 고치면 뒤가 전부 어긋납니다.</p>
+      <p class="hint">AI의 결제 시도는 허용이든 차단이든 전부 여기 남습니다. 각 줄은 앞 줄의 지문을 품고 있어 고치면 뒤가 전부 어긋납니다. <b>기록을 누르면 무엇을 해시했는지 보여줍니다.</b></p>
       <div class="ledger" id="ledger"></div>
       <div class="headbox">마지막 지문<div class="h" id="headHash">-</div></div>
     </div>
@@ -442,6 +460,10 @@
         mid.appendChild(el('div', 'hash', short(r.hash) + '  ←  ' + short(r.prevHash)));
         row.appendChild(mid);
         row.appendChild(el('span', 'badge ' + r.decision, r.decision === 'BLOCKED' ? '차단' : '허용'));
+        row.title = '눌러서 해시 검산 보기';
+        (function (rowEl, rec) {
+          rowEl.addEventListener('click', function () { toggleProof(rowEl, rec); });
+        })(row, r);
         box.appendChild(row);
       }
       var last = records.length ? records[records.length - 1] : null;
@@ -458,6 +480,96 @@
       box.innerHTML = '';
       box.appendChild(el('div', 'empty', '장부를 불러오지 못했습니다: ' + e.message));
     }
+  }
+
+  // ── 해시 검산 ────────────────────────────────────────
+  // 서버(Kotlin)와 같은 규칙으로 문자열을 만든다: hash·signature 제외, 모든 단계 키 알파벳순, 공백 없음.
+  // 같은 규칙이어야 브라우저가 계산한 값과 기록의 hash가 일치한다.
+  function sortDeep(v) {
+    if (Array.isArray(v)) { return v.map(sortDeep); }
+    if (v && typeof v === 'object') {
+      var out = {};
+      var keys = Object.keys(v).sort();
+      for (var i = 0; i < keys.length; i++) { out[keys[i]] = sortDeep(v[keys[i]]); }
+      return out;
+    }
+    return v;
+  }
+  function canonicalOf(record) {
+    var body = {};
+    var keys = Object.keys(record);
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i] !== 'hash' && keys[i] !== 'signature') { body[keys[i]] = record[keys[i]]; }
+    }
+    return JSON.stringify(sortDeep(body));
+  }
+  async function sha256Hex(text) {
+    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    var bytes = Array.prototype.slice.call(new Uint8Array(buf));
+    return bytes.map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+  }
+
+  // 원문에서 값 부분만 진하게 (해시에 들어간 실제 문자열임을 눈으로 보이게)
+  function highlightValues(text) {
+    var frag = document.createDocumentFragment();
+    var re = /:("(?:[^"\\]|\\.)*"|-?\d+)/g;
+    var last = 0, m;
+    while ((m = re.exec(text)) !== null) {
+      frag.appendChild(document.createTextNode(text.slice(last, m.index + 1)));
+      var mk = el('mark', null, m[1]);
+      frag.appendChild(mk);
+      last = m.index + m[0].length;
+    }
+    frag.appendChild(document.createTextNode(text.slice(last)));
+    return frag;
+  }
+
+  async function buildProof(record) {
+    var wrap = el('div', 'proof');
+
+    var s1 = el('div', 'step');
+    var l1 = el('div', 'lbl');
+    l1.appendChild(document.createTextNode('① 이 기록에서 '));
+    l1.appendChild(el('b', null, 'hash · signature'));
+    l1.appendChild(document.createTextNode(' 두 칸을 뺀다 (계산 결과라 재료가 될 수 없음)'));
+    s1.appendChild(l1);
+    var cut = el('div', 'cut');
+    cut.appendChild(el('span', null, 'hash = ' + short(record.hash)));
+    cut.appendChild(el('span', null, 'signature = ' + record.signature.slice(0, 10) + '…'));
+    s1.appendChild(cut);
+    wrap.appendChild(s1);
+
+    var canonical = canonicalOf(record);
+    var s2 = el('div', 'step');
+    var l2 = el('div', 'lbl');
+    l2.appendChild(el('b', null, '② 해시에 넣은 문자열'));
+    l2.appendChild(document.createTextNode(' — 남은 칸을 알파벳순으로 이어 붙인 ' + canonical.length + '자'));
+    s2.appendChild(l2);
+    var src = el('div', 'src');
+    src.appendChild(highlightValues(canonical));
+    s2.appendChild(src);
+    wrap.appendChild(s2);
+
+    var computed = await sha256Hex(canonical);
+    var s3 = el('div', 'step');
+    s3.appendChild(el('div', 'lbl', '③ 브라우저가 지금 직접 계산한 값과, 기록에 적힌 값'));
+    var cmp = el('div', 'cmp');
+    var r1 = el('div'); r1.appendChild(el('i', null, '계산한 값')); r1.appendChild(el('span', 'v', computed));
+    var r2 = el('div'); r2.appendChild(el('i', null, '기록의 hash')); r2.appendChild(el('span', 'v', record.hash));
+    cmp.appendChild(r1); cmp.appendChild(r2);
+    s3.appendChild(cmp);
+    var ok = computed === record.hash;
+    s3.appendChild(el('div', 'verdict ' + (ok ? 'ok' : 'no'),
+      ok ? '✓ 같습니다 — 이 기록은 한 글자도 고쳐지지 않았습니다'
+         : '✗ 다릅니다 — 내용이 고쳐졌습니다'));
+    wrap.appendChild(s3);
+    return wrap;
+  }
+
+  async function toggleProof(row, record) {
+    var open = row.querySelector('.proof');
+    if (open) { open.remove(); return; }
+    row.appendChild(await buildProof(record));
   }
 
   // ── 도장 ──────────────────────────────────────────────
