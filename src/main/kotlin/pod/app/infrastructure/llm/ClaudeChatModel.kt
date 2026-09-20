@@ -11,6 +11,7 @@ import com.anthropic.models.messages.StopReason
 import com.anthropic.models.messages.Tool
 import com.anthropic.models.messages.ToolResultBlockParam
 import com.anthropic.models.messages.ToolUseBlock
+import com.anthropic.models.messages.WebSearchTool20250305
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -31,7 +32,7 @@ internal const val SYSTEM_PROMPT =
     "당신은 친절한 AI 비서입니다. 어떤 주제든 편하게 대화하고 아는 만큼 답해 주세요. " +
         "온라인 마트 기능도 있습니다: 사용자가 상품을 언급하거나 사고 싶어 하면 search_product로 검색하고, " +
         "검색된 상품이 있으면 사용자에게 다시 확인하지 말고 즉시 pay로 결제까지 진행하세요. " +
-        "결제가 거부되면 그 사실과 사유를 알려 주세요. 한국어로, 간결하게 답하세요."
+        "결제가 거부되면 그 사실과 사유를 알려 주세요. 확실하지 않은 사실은 web_search로 찾아보고 답하세요. 한국어로, 간결하게 답하세요."
 
 /**
  * Claude Messages API로 도구 루프를 돌린다.
@@ -72,15 +73,30 @@ class ClaudeChatModel(
             val response = callClaude(messages)
             val agent = AgentInfo(provider = "anthropic", model = model, requestId = response.id(), sessionId = sessionId)
 
-            // assistant 발언은 그대로 기록에 남긴다
+            // assistant 발언과 서버 측 웹 검색(호출·결과)을 순서대로 기록에 남긴다
             for (block in response.content()) {
                 if (block.text().isPresent) {
                     steps.add(AgentStep(AgentStepKind.ASSISTANT, block.text().get().text()))
                 }
+                if (block.serverToolUse().isPresent) {
+                    val serverTool = block.serverToolUse().get()
+                    steps.add(AgentStep(AgentStepKind.TOOL_CALL, "web_search " + toolInputToJson(serverTool._input())))
+                }
+                if (block.webSearchToolResult().isPresent) {
+                    steps.add(AgentStep(AgentStepKind.TOOL_RESULT, "웹 검색 결과를 받았습니다"))
+                }
             }
 
-            // 도구 호출이 없으면 끝
-            val isToolUse = response.stopReason().isPresent && response.stopReason().get() == StopReason.TOOL_USE
+            // 웹 검색이 길어지면 API가 pause_turn으로 잠시 끊는다 — 지금까지 내용을 그대로 넘겨 이어서 부른다
+            val stopReason = response.stopReason()
+            val isPauseTurn = stopReason.isPresent && stopReason.get() == StopReason.PAUSE_TURN
+            if (isPauseTurn) {
+                messages.add(response.toParam())
+                continue
+            }
+
+            // 우리 도구 호출이 없으면 끝
+            val isToolUse = stopReason.isPresent && stopReason.get() == StopReason.TOOL_USE
             if (!isToolUse) {
                 return steps
             }
@@ -114,6 +130,8 @@ class ClaudeChatModel(
             .system(SYSTEM_PROMPT)
             .addTool(searchProductTool())
             .addTool(payTool())
+            // 서버 측 웹 검색. Anthropic이 직접 실행하므로 우리 쪽 실행 코드가 없다. Haiku 4.5가 지원하는 기본 변형.
+            .addTool(WebSearchTool20250305.builder().maxUses(3L).build())
         for (message in messages) {
             builder.addMessage(message)
         }

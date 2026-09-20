@@ -308,10 +308,11 @@
   function toolCallCard(content) {
     var c = splitToolCall(content);
     var isPay = c.name === 'pay';
+    var LABEL = { search_product: '상품 검색 · search_product', pay: '결제 시도 · pay', web_search: '웹 검색 · web_search' };
     var card = el('div', 'tool');
     var ic = el('div', 'ic'); ic.appendChild(svg(isPay ? ICON.card : ICON.search, '#9DB4FF')); card.appendChild(ic);
     var body = el('div');
-    body.appendChild(el('div', 't', isPay ? '결제 시도 · pay' : '상품 검색 · search_product'));
+    body.appendChild(el('div', 't', LABEL[c.name] || c.name));
     body.appendChild(el('div', 'v', prettyArgs(c.args)));
     card.appendChild(body);
     return card;
