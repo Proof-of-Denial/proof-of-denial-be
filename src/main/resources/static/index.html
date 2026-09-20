@@ -280,6 +280,23 @@
     return row;
   }
   function addBubble(kind, text) { return addRow(kind, el('div', 'bubble', text)); }
+
+  // AI 답변만 가벼운 마크다운: 먼저 전부 이스케이프한 뒤 굵게·제목·글머리만 바꾼다 (링크·HTML은 그대로 글자로)
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+  function renderMarkdownLite(text) {
+    var html = escapeHtml(text);
+    html = html.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+    html = html.replace(/^#{1,6}\s+(.+)$/gm, '<b>$1</b>');
+    html = html.replace(/^\s*[-*]\s+/gm, '\u2022 ');
+    return html;
+  }
+  function addAssistantBubble(text) {
+    var b = el('div', 'bubble');
+    b.innerHTML = renderMarkdownLite(text);
+    return addRow('ai', b);
+  }
   function addSystem(text, isError) {
     var row = addRow('sys' + (isError ? ' err' : ''), el('div', 'bubble', text));
     return row;
@@ -354,7 +371,7 @@
         var typing = showTyping();
         await pace(700);
         typing.remove();
-        addBubble('ai', s.content);
+        addAssistantBubble(s.content);
         await pace(500);
       } else if (s.kind === 'TOOL_CALL') {
         addRow('ai', toolCallCard(s.content));

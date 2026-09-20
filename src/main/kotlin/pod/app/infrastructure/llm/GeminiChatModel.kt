@@ -58,11 +58,16 @@ class GeminiChatModel(
             val response = callGemini(history)
             val agent = AgentInfo(provider = "google", model = model, requestId = requestIdOf(response), sessionId = sessionId)
 
-            // assistant 발언은 그대로 기록에 남긴다
+            // assistant 발언은 조각을 하나로 합쳐 말풍선 하나로 남긴다. 공백뿐이면 버린다.
+            val assistantText = StringBuilder()
             for (part in textPartsOf(response)) {
                 if (part.text().isPresent) {
-                    steps.add(AgentStep(AgentStepKind.ASSISTANT, part.text().get()))
+                    assistantText.append(part.text().get())
                 }
+            }
+            val trimmedText = assistantText.toString().trim()
+            if (trimmedText.isNotEmpty()) {
+                steps.add(AgentStep(AgentStepKind.ASSISTANT, trimmedText))
             }
 
             // 함수 호출이 없으면 끝

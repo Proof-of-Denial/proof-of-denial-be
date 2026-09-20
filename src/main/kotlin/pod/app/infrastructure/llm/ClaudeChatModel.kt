@@ -73,11 +73,15 @@ class ClaudeChatModel(
             val response = callClaude(messages)
             val agent = AgentInfo(provider = "anthropic", model = model, requestId = response.id(), sessionId = sessionId)
 
-            // assistant 발언과 서버 측 웹 검색(호출·결과)을 순서대로 기록에 남긴다
+            // assistant 발언과 서버 측 웹 검색(호출·결과)을 순서대로 기록에 남긴다.
+            // 웹 검색·인용이 붙으면 한 답변이 여러 text 조각으로 오므로, 도구 블록 사이의 조각은 하나로 합친다.
+            val pendingText = StringBuilder()
             for (block in response.content()) {
                 if (block.text().isPresent) {
-                    steps.add(AgentStep(AgentStepKind.ASSISTANT, block.text().get().text()))
+                    pendingText.append(block.text().get().text())
+                    continue
                 }
+                flushAssistantText(pendingText, steps)
                 if (block.serverToolUse().isPresent) {
                     val serverTool = block.serverToolUse().get()
                     steps.add(AgentStep(AgentStepKind.TOOL_CALL, "web_search " + toolInputToJson(serverTool._input())))
@@ -86,6 +90,7 @@ class ClaudeChatModel(
                     steps.add(AgentStep(AgentStepKind.TOOL_RESULT, "웹 검색 결과를 받았습니다"))
                 }
             }
+            flushAssistantText(pendingText, steps)
 
             // 웹 검색이 길어지면 API가 pause_turn으로 잠시 끊는다 — 지금까지 내용을 그대로 넘겨 이어서 부른다
             val stopReason = response.stopReason()
@@ -121,6 +126,16 @@ class ClaudeChatModel(
 
         logger.warn("도구 루프 상한 도달 sessionId={}", sessionId)
         return steps
+    }
+
+    /** 모아둔 텍스트 조각을 말풍선 하나로 내보낸다. 공백뿐이면 버린다. */
+    private fun flushAssistantText(pendingText: StringBuilder, steps: MutableList<AgentStep>) {
+        val text = pendingText.toString().trim()
+        pendingText.setLength(0)
+        if (text.isEmpty()) {
+            return
+        }
+        steps.add(AgentStep(AgentStepKind.ASSISTANT, text))
     }
 
     private fun callClaude(messages: List<MessageParam>): Message {
