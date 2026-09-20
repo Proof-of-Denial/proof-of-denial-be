@@ -42,7 +42,7 @@ pod/
 AI 에이전트를 돌리려면 API 키가 필요하다 (없어도 장부 API·검증 CLI는 동작한다). 기본은 Claude, `AGENT_PROVIDER=gemini`로 바꾸면 Gemini가 대신 돈다:
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+export POD_ANTHROPIC_API_KEY=sk-ant-api03-...   # ANTHROPIC_API_KEY 가 아니라 POD_ 접두사 (셸의 다른 토큰과 충돌 방지)
 # 또는
 export AGENT_PROVIDER=gemini
 export GEMINI_API_KEY=AIza...

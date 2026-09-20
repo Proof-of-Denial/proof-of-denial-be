@@ -2,6 +2,7 @@ package pod.config
 
 import com.anthropic.client.AnthropicClient
 import com.anthropic.client.okhttp.AnthropicOkHttpClient
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -11,9 +12,13 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 @ConditionalOnProperty(name = ["agent.provider"], havingValue = "claude", matchIfMissing = true)
 class ClaudeConfig {
+    private val logger = LoggerFactory.getLogger(ClaudeConfig::class.java)
 
     @Bean
-    fun anthropicClient(@Value("\${anthropic.api-key}") apiKey: String): AnthropicClient {
+    fun anthropicClient(@Value("\${pod.anthropic.api-key}") apiKey: String): AnthropicClient {
+        // 값은 절대 찍지 않는다. 길이와 형식만 — 셸의 다른 토큰이 섞여 들어왔는지 기동 로그에서 바로 보이게.
+        val looksLikeApiKey = apiKey.startsWith("sk-ant-api")
+        logger.info("Anthropic 키: {}자, 형식 {}", apiKey.length, if (looksLikeApiKey) "sk-ant-api ✓" else "API 키 아님")
         var keyToUse = apiKey
         if (apiKey.isBlank()) {
             keyToUse = "not-configured"

@@ -13,14 +13,17 @@ guard:
   max-amount: 10000
   allowed-merchants: 마트A
 
-# Claude 호출. 키는 환경변수 ANTHROPIC_API_KEY로만 넣는다. 비어 있으면 /agent/chat만 503.
-anthropic:
-  api-key: ${ANTHROPIC_API_KEY:}
-  model: claude-opus-5
+# Claude 호출. 키는 환경변수 POD_ANTHROPIC_API_KEY로만 넣는다. 비어 있으면 /agent/chat만 503.
+# 속성 이름을 pod.anthropic.* 로 둔 이유: Spring은 anthropic.api-key 를 셸의 ANTHROPIC_API_KEY 환경변수와
+# 자동으로 짝지어 버린다(relaxed binding). 셸에 Claude Code용 토큰이 그 이름으로 있으면 앱 키가 가려진다.
+pod:
+  anthropic:
+    api-key: ${POD_ANTHROPIC_API_KEY:}
+    model: claude-haiku-4-5-20251001
 
 # 에이전트 LLM 선택: claude | gemini
 agent:
-  provider: ${AGENT_PROVIDER:gemini}
+  provider: ${AGENT_PROVIDER:claude}
 
 # Gemini. 키는 환경변수 GEMINI_API_KEY로만 넣는다.
 gemini:

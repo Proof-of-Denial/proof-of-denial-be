@@ -49,8 +49,8 @@ internal fun toolInputToJson(input: JsonValue): String {
 @ConditionalOnProperty(name = ["agent.provider"], havingValue = "claude", matchIfMissing = true)
 class ClaudeChatModel(
     private val client: AnthropicClient,
-    @Value("\${anthropic.api-key}") private val apiKey: String,
-    @Value("\${anthropic.model}") private val model: String,
+    @Value("\${pod.anthropic.api-key}") private val apiKey: String,
+    @Value("\${pod.anthropic.model}") private val model: String,
 ) : ChatModel {
     private val logger = LoggerFactory.getLogger(ClaudeChatModel::class.java)
 
